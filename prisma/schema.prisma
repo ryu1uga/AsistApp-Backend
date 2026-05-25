@@ -1,0 +1,212 @@
+generator client {
+  provider        = "prisma-client"
+  previewFeatures = ["relationJoins"]
+  output          = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  validator
+  trainee
+}
+
+enum UserStatus {
+  pending
+  active
+  rejected
+}
+
+enum ScheduleStatus {
+  pending
+  approved
+  rejected
+}
+
+enum DayOfWeek {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+}
+
+enum RequestStatus {
+  pending
+  approved
+  rejected
+}
+
+enum AttendanceStatus {
+  pending
+  confirmed
+  absence
+}
+
+enum LogCategory {
+  attendance
+  schedule
+  members
+}
+
+model Organization {
+  id             String      @id @default(uuid()) @db.Uuid
+  name           String
+  code           String      @unique
+  photoUrl       String?
+  description    String?
+  lateTimeLimit  Int
+  createdAt      DateTime    @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime    @updatedAt @db.Timestamp(6)
+
+  users          User[]
+  schedules      Schedule[]
+  attendanceRecords AttendanceRecord[]
+  attendanceRequests AttendanceRequest[]
+  activityLogs   ActivityLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                 String   @id @default(uuid()) @db.Uuid
+  firstName          String   @map("first_name")
+  lastName           String   @map("last_name")
+  institutionalEmail String   @unique @map("institutional_email")
+  phoneNumber        String   @map("phone_number")
+  career             String?
+  cycle              Int?
+  organizationId     String?  @db.Uuid @map("organization_id")
+  role               UserRole
+  status             UserStatus
+  deviceToken        String?  @map("device_token")
+  createdAt          DateTime @default(now()) @db.Timestamp(6)
+  updatedAt          DateTime @updatedAt @db.Timestamp(6)
+
+  organization       Organization? @relation(fields: [organizationId], references: [id])
+  schedules          Schedule[]
+  scheduleChangeRequestsRequested ScheduleChangeRequest[] @relation("ScheduleChangeRequestedBy")
+  scheduleChangeRequestsReviewed  ScheduleChangeRequest[] @relation("ScheduleChangeReviewedBy")
+  attendanceRecords  AttendanceRecord[] @relation("AttendanceByUser")
+  attendanceValidations AttendanceRecord[] @relation("AttendanceValidatedBy")
+  attendanceRequestsRequested AttendanceRequest[] @relation("AttendanceRequestedBy")
+  attendanceRequestsReviewed  AttendanceRequest[] @relation("AttendanceReviewedBy")
+  activityLogsGenerated ActivityLog[] @relation("ActivityLoggedBy")
+  activityLogsAffected  ActivityLog[] @relation("ActivityAffectedUser")
+
+  @@map("users")
+}
+
+model Schedule {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid @map("user_id")
+  organizationId String  @db.Uuid @map("organization_id")
+  weeklyHours   Int      @map("weekly_hours")
+  status        ScheduleStatus
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt @db.Timestamp(6)
+
+  user          User     @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  days          ScheduleDay[]
+
+  @@map("schedules")
+}
+
+model ScheduleDay {
+  id             String   @id @default(uuid()) @db.Uuid
+  scheduleId     String   @db.Uuid @map("schedule_id")
+  day            DayOfWeek
+  checkInTime    DateTime @db.Time(6) @map("check_in_time")
+  lunchStartTime DateTime? @db.Time(6) @map("lunch_start_time")
+  lunchEndTime   DateTime? @db.Time(6) @map("lunch_end_time")
+  checkOutTime   DateTime @db.Time(6) @map("check_out_time")
+  updatedAt      DateTime @updatedAt @db.Timestamp(6)
+
+  schedule       Schedule @relation(fields: [scheduleId], references: [id])
+  changeRequests  ScheduleChangeRequest[]
+
+  @@map("schedule_days")
+}
+
+model ScheduleChangeRequest {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid @map("user_id")
+  scheduleDayId       String   @db.Uuid @map("schedule_day_id")
+  newCheckInTime      DateTime? @db.Time(6) @map("new_check_in_time")
+  newLunchStartTime   DateTime? @db.Time(6) @map("new_lunch_start_time")
+  newLunchEndTime     DateTime? @db.Time(6) @map("new_lunch_end_time")
+  newCheckOutTime     DateTime? @db.Time(6) @map("new_check_out_time")
+  reason              String
+  status              RequestStatus
+  reviewedById        String?  @db.Uuid @map("reviewed_by")
+  createdAt           DateTime @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime @updatedAt @db.Timestamp(6)
+
+  user                User @relation("ScheduleChangeRequestedBy", fields: [userId], references: [id])
+  scheduleDay         ScheduleDay @relation(fields: [scheduleDayId], references: [id])
+  reviewedBy          User? @relation("ScheduleChangeReviewedBy", fields: [reviewedById], references: [id])
+
+  @@map("schedule_change_requests")
+}
+
+model AttendanceRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid @map("user_id")
+  organizationId String   @db.Uuid @map("organization_id")
+  date           DateTime @db.Date
+  checkIn        DateTime? @map("check_in")
+  lunchStart     DateTime? @map("lunch_start")
+  lunchEnd       DateTime? @map("lunch_end")
+  checkOut       DateTime? @map("check_out")
+  autoCheckout   Boolean  @map("auto_checkout")
+  lateMinutes    Int?     @map("late_minutes")
+  totalMinutes   Int?     @map("total_minutes")
+  status         AttendanceStatus
+  validatedById  String?  @db.Uuid @map("validated_by")
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime @updatedAt @db.Timestamp(6)
+
+  user           User     @relation("AttendanceByUser", fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  validatedBy    User?    @relation("AttendanceValidatedBy", fields: [validatedById], references: [id])
+
+  @@map("attendance_records")
+}
+
+model AttendanceRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid @map("user_id")
+  organizationId String   @db.Uuid @map("organization_id")
+  requestedDate  DateTime @db.Date @map("requested_date")
+  reason         String
+  status         RequestStatus
+  reviewedById   String?  @db.Uuid @map("reviewed_by")
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime @updatedAt @db.Timestamp(6)
+
+  user           User     @relation("AttendanceRequestedBy", fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  reviewedBy    User?    @relation("AttendanceReviewedBy", fields: [reviewedById], references: [id])
+
+  @@map("attendance_requests")
+}
+
+model ActivityLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid @map("organization_id")
+  performedById  String   @db.Uuid @map("performed_by")
+  affectedUserId String   @db.Uuid @map("affected_user_id")
+  title          String
+  category       LogCategory
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  performedBy    User        @relation("ActivityLoggedBy", fields: [performedById], references: [id])
+  affectedUser   User        @relation("ActivityAffectedUser", fields: [affectedUserId], references: [id])
+
+  @@map("activity_logs")
+}
