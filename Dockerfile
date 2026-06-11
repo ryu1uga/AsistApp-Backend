@@ -12,6 +12,11 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 
+# `prisma generate` only reads schema/types, but prisma.config.ts requires
+# DATABASE_URL to be resolvable. Provide a placeholder for the build step;
+# the real value is injected at runtime by Render.
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/db"
+
 # Generate Prisma client and compile TypeScript
 RUN npx prisma generate
 RUN npm run build
