@@ -159,3 +159,81 @@ docker volume rm asistapp_pgdata
 docker run -d --name asistapp-db -e POSTGRES_DB=asistapp_db -e POSTGRES_USER=asistapp -e POSTGRES_PASSWORD=asistapp -p 5434:5432 -v asistapp_pgdata:/var/lib/postgresql/data postgres:16
 npx prisma migrate deploy
 ```
+
+## Despliegue en producción (Render + Supabase)
+
+En producción, la base de datos PostgreSQL se aloja en **Supabase** y el backend se despliega en **Render** usando el `Dockerfile` incluido en el proyecto.
+
+### 1. Crear la base de datos en Supabase
+
+1. Crea una cuenta/proyecto en [supabase.com](https://supabase.com) → **New Project**.
+2. Define el nombre, la contraseña de la base de datos (guárdala) y la región (elige una cercana a la región de Render).
+3. Ve a **Project Settings → Database → Connection string** y copia:
+   - **Connection pooling** (puerto `6543`): se usará como `DATABASE_URL`, para las consultas de la app.
+   - **Connection directa** (puerto `5432`): se usará como `DIRECT_URL`, para correr migraciones.
+
+   Ejemplo:
+   ```env
+   DATABASE_URL="postgres://postgres.xxxx:TU_PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgres://postgres.xxxx:TU_PASSWORD@aws-0-region.pooler.supabase.com:5432/postgres"
+   ```
+
+4. Si se usa `DIRECT_URL`, el `datasource` de `prisma/schema.prisma` y el `prisma.config.ts` deben incluir `directUrl`:
+
+   ```prisma
+   datasource db {
+     provider  = "postgresql"
+     url       = env("DATABASE_URL")
+     directUrl = env("DIRECT_URL")
+   }
+   ```
+
+### 2. Dockerfile
+
+El proyecto incluye un `Dockerfile` multi-stage que:
+
+1. Instala dependencias y ejecuta `npx prisma generate`.
+2. Compila TypeScript con `npm run build`.
+3. En la imagen final, copia el `dist/` compilado e instala solo dependencias de producción.
+4. Al iniciar el contenedor ejecuta `npx prisma migrate deploy` (aplica migraciones pendientes contra Supabase) y luego `node dist/index.js`.
+
+No requiere configuración adicional: Render lo detecta automáticamente al elegir entorno **Docker**.
+
+### 3. Crear el servicio en Render
+
+1. Sube los cambios (`Dockerfile`, `.dockerignore`, migraciones) a GitHub:
+   ```bash
+   git add Dockerfile .dockerignore prisma
+   git commit -m "Add Dockerfile for Render deployment"
+   git push
+   ```
+2. En [render.com](https://render.com) → **New → Web Service**.
+3. Conecta el repositorio `AsistApp-Backend`.
+4. En **Environment**, selecciona **Docker** (Render usará el `Dockerfile` del repo).
+5. Configura la región (idealmente la misma que Supabase) y el plan de instancia.
+6. En **Environment Variables**, agrega:
+
+   | Variable       | Valor                                          |
+   |----------------|--------------------------------------------------|
+   | `DATABASE_URL` | Connection pooling de Supabase                    |
+   | `DIRECT_URL`   | Connection directa de Supabase (si se usa)        |
+   | `TOKEN`        | Token de autenticación de la API                  |
+
+   > No es necesario definir `PORT`: Render lo asigna automáticamente y la app ya lo lee de `process.env.PORT`.
+
+7. Click en **Create Web Service**. Render construye la imagen, ejecuta `prisma migrate deploy` contra Supabase y arranca el servidor.
+
+### 4. Verificar el despliegue
+
+- Revisa los **logs** del deploy en Render: deben mostrar la aplicación de migraciones y luego `Se inicio servidor en http://localhost:.../`.
+- Visita la URL pública (ej. `https://asistapp-backend.onrender.com/`) — debe responder "Endpoint raiz de Backend".
+
+### 5. Flujo de actualizaciones
+
+Cada `git push` a la rama configurada dispara un nuevo deploy en Render: reconstruye la imagen Docker, aplica nuevas migraciones (`prisma/migrations`) y reinicia el servidor automáticamente. Asegúrate de generar y commitear las migraciones (`npx prisma migrate dev --name ...`) antes de hacer push.
+
+### Notas
+
+- **Plan free de Render**: el servicio se "duerme" tras inactividad; el primer request tras inactividad tarda más en responder.
+- **Conexiones a Supabase**: por defecto Supabase acepta conexiones externas con las credenciales correctas; no se requiere whitelisting de IP adicional.
+- **Variables sensibles**: nunca subas el `.env` con credenciales reales al repositorio; configúralas directamente en el panel de Render.
