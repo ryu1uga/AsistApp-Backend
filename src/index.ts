@@ -23,6 +23,31 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Healthcheck del servicio
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: El servicio está funcionando correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
+app.get("/health", (req: Request, resp: Response) => {
+    resp.status(200).json({ status: "ok", timestamp: new Date().toISOString() })
+})
+
 app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customSiteTitle: "AsistApp Backend - API Docs"
 }))

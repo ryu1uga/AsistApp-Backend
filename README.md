@@ -128,6 +128,12 @@ prisma/
 └── migrations/          # Historial de migraciones
 ```
 
+## Healthcheck
+
+El endpoint `GET /health` responde `200 OK` con `{ "status": "ok", "timestamp": "..." }`. No depende de la base de datos, por lo que es ideal para servicios de monitoreo como [UptimeRobot](https://uptimerobot.com/).
+
+En el plan free de Render, los servicios web se "duermen" tras ~15 minutos de inactividad. Configurando un monitor HTTP en UptimeRobot que haga ping a `https://<tu-servicio>.onrender.com/health` cada 5-10 minutos, el servicio se mantiene activo y evita los "cold starts".
+
 ## Documentación interactiva (Swagger)
 
 La raíz del proyecto (`/`) sirve la documentación interactiva con Swagger UI, generada a partir de anotaciones JSDoc en los controladores (`src/config/swagger.ts`).
