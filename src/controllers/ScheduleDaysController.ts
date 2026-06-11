@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateScheduleDayDto, UpdateScheduleDayDto } from "../dtos";
 
 const ScheduleDaysController = () => {
     const router = express.Router();
@@ -77,7 +78,7 @@ const ScheduleDaysController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/ScheduleDay'
+     *             $ref: '#/components/schemas/CreateScheduleDayDto'
      *     responses:
      *       201:
      *         description: Día de horario creado
@@ -88,8 +89,9 @@ const ScheduleDaysController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateScheduleDayDto = req.body;
             const scheduleDay = await prisma.scheduleDay.create({
-                data: req.body
+                data
             });
             resp.status(201).json(scheduleDay);
         } catch (error) {
@@ -115,7 +117,7 @@ const ScheduleDaysController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/ScheduleDay'
+     *             $ref: '#/components/schemas/UpdateScheduleDayDto'
      *     responses:
      *       200:
      *         description: Día de horario actualizado
@@ -126,9 +128,10 @@ const ScheduleDaysController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateScheduleDayDto = req.body;
             const scheduleDay = await prisma.scheduleDay.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(scheduleDay);
         } catch (error) {

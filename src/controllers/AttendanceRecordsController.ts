@@ -1,5 +1,7 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateAttendanceRecordDto, UpdateAttendanceRecordDto } from "../dtos";
+import { AttendanceStatus } from "../generated/prisma/enums";
 
 const AttendanceRecordsController = () => {
     const router = express.Router();
@@ -77,7 +79,7 @@ const AttendanceRecordsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/AttendanceRecord'
+     *             $ref: '#/components/schemas/CreateAttendanceRecordDto'
      *     responses:
      *       201:
      *         description: Registro de asistencia creado
@@ -88,8 +90,12 @@ const AttendanceRecordsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateAttendanceRecordDto = req.body;
             const record = await prisma.attendanceRecord.create({
-                data: req.body
+                data: {
+                    ...data,
+                    status: AttendanceStatus.pending
+                }
             });
             resp.status(201).json(record);
         } catch (error) {
@@ -115,7 +121,7 @@ const AttendanceRecordsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/AttendanceRecord'
+     *             $ref: '#/components/schemas/UpdateAttendanceRecordDto'
      *     responses:
      *       200:
      *         description: Registro de asistencia actualizado
@@ -126,9 +132,10 @@ const AttendanceRecordsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateAttendanceRecordDto = req.body;
             const record = await prisma.attendanceRecord.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(record);
         } catch (error) {

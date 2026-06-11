@@ -1,5 +1,7 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "../dtos";
+import { RequestStatus } from "../generated/prisma/enums";
 
 const ScheduleChangeRequestsController = () => {
     const router = express.Router();
@@ -77,7 +79,7 @@ const ScheduleChangeRequestsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/ScheduleChangeRequest'
+     *             $ref: '#/components/schemas/CreateScheduleChangeRequestDto'
      *     responses:
      *       201:
      *         description: Solicitud de cambio de horario creada
@@ -88,8 +90,12 @@ const ScheduleChangeRequestsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateScheduleChangeRequestDto = req.body;
             const request = await prisma.scheduleChangeRequest.create({
-                data: req.body
+                data: {
+                    ...data,
+                    status: RequestStatus.pending
+                }
             });
             resp.status(201).json(request);
         } catch (error) {
@@ -115,7 +121,7 @@ const ScheduleChangeRequestsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/ScheduleChangeRequest'
+     *             $ref: '#/components/schemas/UpdateScheduleChangeRequestDto'
      *     responses:
      *       200:
      *         description: Solicitud de cambio de horario actualizada
@@ -126,9 +132,10 @@ const ScheduleChangeRequestsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateScheduleChangeRequestDto = req.body;
             const request = await prisma.scheduleChangeRequest.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(request);
         } catch (error) {

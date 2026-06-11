@@ -1,5 +1,7 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos";
+import { RequestStatus } from "../generated/prisma/enums";
 
 const AttendanceRequestsController = () => {
     const router = express.Router();
@@ -77,7 +79,7 @@ const AttendanceRequestsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/AttendanceRequest'
+     *             $ref: '#/components/schemas/CreateAttendanceRequestDto'
      *     responses:
      *       201:
      *         description: Solicitud de asistencia creada
@@ -88,8 +90,12 @@ const AttendanceRequestsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateAttendanceRequestDto = req.body;
             const request = await prisma.attendanceRequest.create({
-                data: req.body
+                data: {
+                    ...data,
+                    status: RequestStatus.pending
+                }
             });
             resp.status(201).json(request);
         } catch (error) {
@@ -115,7 +121,7 @@ const AttendanceRequestsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/AttendanceRequest'
+     *             $ref: '#/components/schemas/UpdateAttendanceRequestDto'
      *     responses:
      *       200:
      *         description: Solicitud de asistencia actualizada
@@ -126,9 +132,10 @@ const AttendanceRequestsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateAttendanceRequestDto = req.body;
             const request = await prisma.attendanceRequest.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(request);
         } catch (error) {

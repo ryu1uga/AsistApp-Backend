@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateOrganizationDto, UpdateOrganizationDto } from "../dtos";
 
 const OrganizationsController = () => {
     const router = express.Router();
@@ -77,7 +78,7 @@ const OrganizationsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/Organization'
+     *             $ref: '#/components/schemas/CreateOrganizationDto'
      *     responses:
      *       201:
      *         description: Organización creada
@@ -88,8 +89,9 @@ const OrganizationsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateOrganizationDto = req.body;
             const organization = await prisma.organization.create({
-                data: req.body
+                data
             });
             resp.status(201).json(organization);
         } catch (error) {
@@ -115,7 +117,7 @@ const OrganizationsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/Organization'
+     *             $ref: '#/components/schemas/UpdateOrganizationDto'
      *     responses:
      *       200:
      *         description: Organización actualizada
@@ -126,9 +128,10 @@ const OrganizationsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateOrganizationDto = req.body;
             const organization = await prisma.organization.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(organization);
         } catch (error) {

@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateActivityLogDto, UpdateActivityLogDto } from "../dtos";
 
 const ActivityLogsController = () => {
     const router = express.Router();
@@ -77,7 +78,7 @@ const ActivityLogsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/ActivityLog'
+     *             $ref: '#/components/schemas/CreateActivityLogDto'
      *     responses:
      *       201:
      *         description: Registro de actividad creado
@@ -88,8 +89,9 @@ const ActivityLogsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateActivityLogDto = req.body;
             const log = await prisma.activityLog.create({
-                data: req.body
+                data
             });
             resp.status(201).json(log);
         } catch (error) {
@@ -115,7 +117,7 @@ const ActivityLogsController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/ActivityLog'
+     *             $ref: '#/components/schemas/UpdateActivityLogDto'
      *     responses:
      *       200:
      *         description: Registro de actividad actualizado
@@ -126,9 +128,10 @@ const ActivityLogsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateActivityLogDto = req.body;
             const log = await prisma.activityLog.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(log);
         } catch (error) {

@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
+import { CreateUserDto, UpdateUserDto } from "../dtos";
 
 const UsersController = () => {
     const router = express.Router();
@@ -77,7 +78,7 @@ const UsersController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/User'
+     *             $ref: '#/components/schemas/CreateUserDto'
      *     responses:
      *       201:
      *         description: Usuario creado
@@ -88,8 +89,9 @@ const UsersController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const data: CreateUserDto = req.body;
             const user = await prisma.user.create({
-                data: req.body
+                data
             });
             resp.status(201).json(user);
         } catch (error) {
@@ -115,7 +117,7 @@ const UsersController = () => {
      *       content:
      *         application/json:
      *           schema:
-     *             $ref: '#/components/schemas/User'
+     *             $ref: '#/components/schemas/UpdateUserDto'
      *     responses:
      *       200:
      *         description: Usuario actualizado
@@ -126,9 +128,10 @@ const UsersController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const data: UpdateUserDto = req.body;
             const user = await prisma.user.update({
                 where: { id: req.params.id as string },
-                data: req.body
+                data
             });
             resp.json(user);
         } catch (error) {
