@@ -48,10 +48,6 @@ app.get("/health", (req: Request, resp: Response) => {
     resp.status(200).json({ status: "ok", timestamp: new Date().toISOString() })
 })
 
-app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: "AsistApp Backend - API Docs"
-}))
-
 app.use("/organizations", OrganizationsController())
 app.use("/users", UsersController())
 app.use("/schedules", SchedulesController())
@@ -60,6 +56,10 @@ app.use("/schedule-change-requests", ScheduleChangeRequestsController())
 app.use("/attendance-records", AttendanceRecordsController())
 app.use("/attendance-requests", AttendanceRequestsController())
 app.use("/activity-logs", ActivityLogsController())
+
+app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: "AsistApp Backend - API Docs"
+}))
 
 app.listen(PORT, () => {
     console.log(`Se inicio servidor en http://localhost:${PORT}/`)

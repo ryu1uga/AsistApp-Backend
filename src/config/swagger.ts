@@ -2,6 +2,22 @@ import swaggerJsdoc from "swagger-jsdoc";
 
 const PORT = process.env.PORT || 8080;
 
+// Render expone automáticamente la URL pública del servicio en RENDER_EXTERNAL_URL.
+// Si existe, solo se muestra ese servidor; en caso contrario (entorno local), se usa localhost.
+const servers = process.env.RENDER_EXTERNAL_URL
+    ? [
+          {
+              url: process.env.RENDER_EXTERNAL_URL,
+              description: "Servidor de producción (Render)",
+          },
+      ]
+    : [
+          {
+              url: `http://localhost:${PORT}`,
+              description: "Servidor local",
+          },
+      ];
+
 const swaggerSpec = swaggerJsdoc({
     definition: {
         openapi: "3.0.0",
@@ -10,16 +26,7 @@ const swaggerSpec = swaggerJsdoc({
             version: "1.0.0",
             description: "Documentación de la API REST de AsistApp",
         },
-        servers: [
-            {
-                url: `http://localhost:${PORT}`,
-                description: "Servidor local",
-            },
-            {
-                url: "https://asistapp-backend.onrender.com",
-                description: "Servidor de producción (Render)",
-            },
-        ],
+        servers,
         components: {
             schemas: {
                 Organization: {
