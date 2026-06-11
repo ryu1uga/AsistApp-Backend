@@ -4,6 +4,22 @@ import prisma from "../config/db";
 const ScheduleChangeRequestsController = () => {
     const router = express.Router();
 
+    /**
+     * @openapi
+     * /schedule-change-requests:
+     *   get:
+     *     summary: Obtener todas las solicitudes de cambio de horario
+     *     tags: [ScheduleChangeRequests]
+     *     responses:
+     *       200:
+     *         description: Lista de solicitudes de cambio de horario
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/ScheduleChangeRequest'
+     */
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const requests = await prisma.scheduleChangeRequest.findMany();
@@ -13,6 +29,29 @@ const ScheduleChangeRequestsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-change-requests/{id}:
+     *   get:
+     *     summary: Obtener una solicitud de cambio de horario por ID
+     *     tags: [ScheduleChangeRequests]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Solicitud de cambio de horario encontrada
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ScheduleChangeRequest'
+     *       404:
+     *         description: Solicitud de cambio de horario no encontrada
+     */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const request = await prisma.scheduleChangeRequest.findUnique({
@@ -27,6 +66,26 @@ const ScheduleChangeRequestsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-change-requests:
+     *   post:
+     *     summary: Crear una solicitud de cambio de horario
+     *     tags: [ScheduleChangeRequests]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/ScheduleChangeRequest'
+     *     responses:
+     *       201:
+     *         description: Solicitud de cambio de horario creada
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ScheduleChangeRequest'
+     */
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const request = await prisma.scheduleChangeRequest.create({
@@ -38,6 +97,33 @@ const ScheduleChangeRequestsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-change-requests/{id}:
+     *   put:
+     *     summary: Actualizar una solicitud de cambio de horario
+     *     tags: [ScheduleChangeRequests]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/ScheduleChangeRequest'
+     *     responses:
+     *       200:
+     *         description: Solicitud de cambio de horario actualizada
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ScheduleChangeRequest'
+     */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const request = await prisma.scheduleChangeRequest.update({
@@ -50,6 +136,23 @@ const ScheduleChangeRequestsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-change-requests/{id}:
+     *   delete:
+     *     summary: Eliminar una solicitud de cambio de horario
+     *     tags: [ScheduleChangeRequests]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       204:
+     *         description: Solicitud de cambio de horario eliminada
+     */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             await prisma.scheduleChangeRequest.delete({

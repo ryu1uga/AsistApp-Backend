@@ -128,6 +128,15 @@ prisma/
 └── migrations/          # Historial de migraciones
 ```
 
+## Documentación interactiva (Swagger)
+
+La raíz del proyecto (`/`) sirve la documentación interactiva con Swagger UI, generada a partir de anotaciones JSDoc en los controladores (`src/config/swagger.ts`).
+
+- En desarrollo: `http://localhost:<PORT>/`
+- En producción (Render): `https://asistapp-backend.onrender.com/`
+
+Desde ahí se pueden probar todos los endpoints (GET, POST, PUT, DELETE) directamente desde el navegador.
+
 ## Endpoints principales
 
 | Recurso                     | Ruta base                     |

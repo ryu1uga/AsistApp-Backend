@@ -4,6 +4,22 @@ import prisma from "../config/db";
 const UsersController = () => {
     const router = express.Router();
 
+    /**
+     * @openapi
+     * /users:
+     *   get:
+     *     summary: Obtener todos los usuarios
+     *     tags: [Users]
+     *     responses:
+     *       200:
+     *         description: Lista de usuarios
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/User'
+     */
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const users = await prisma.user.findMany();
@@ -13,6 +29,29 @@ const UsersController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /users/{id}:
+     *   get:
+     *     summary: Obtener un usuario por ID
+     *     tags: [Users]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Usuario encontrado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     *       404:
+     *         description: Usuario no encontrado
+     */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const user = await prisma.user.findUnique({
@@ -27,6 +66,26 @@ const UsersController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /users:
+     *   post:
+     *     summary: Crear un usuario
+     *     tags: [Users]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/User'
+     *     responses:
+     *       201:
+     *         description: Usuario creado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     */
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const user = await prisma.user.create({
@@ -38,6 +97,33 @@ const UsersController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /users/{id}:
+     *   put:
+     *     summary: Actualizar un usuario
+     *     tags: [Users]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/User'
+     *     responses:
+     *       200:
+     *         description: Usuario actualizado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const user = await prisma.user.update({
@@ -50,6 +136,23 @@ const UsersController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /users/{id}:
+     *   delete:
+     *     summary: Eliminar un usuario
+     *     tags: [Users]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       204:
+     *         description: Usuario eliminado
+     */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             await prisma.user.delete({

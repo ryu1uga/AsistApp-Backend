@@ -4,6 +4,22 @@ import prisma from "../config/db";
 const ScheduleDaysController = () => {
     const router = express.Router();
 
+    /**
+     * @openapi
+     * /schedule-days:
+     *   get:
+     *     summary: Obtener todos los días de horario
+     *     tags: [ScheduleDays]
+     *     responses:
+     *       200:
+     *         description: Lista de días de horario
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/ScheduleDay'
+     */
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const scheduleDays = await prisma.scheduleDay.findMany();
@@ -13,6 +29,29 @@ const ScheduleDaysController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-days/{id}:
+     *   get:
+     *     summary: Obtener un día de horario por ID
+     *     tags: [ScheduleDays]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Día de horario encontrado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ScheduleDay'
+     *       404:
+     *         description: Día de horario no encontrado
+     */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const scheduleDay = await prisma.scheduleDay.findUnique({
@@ -27,6 +66,26 @@ const ScheduleDaysController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-days:
+     *   post:
+     *     summary: Crear un día de horario
+     *     tags: [ScheduleDays]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/ScheduleDay'
+     *     responses:
+     *       201:
+     *         description: Día de horario creado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ScheduleDay'
+     */
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const scheduleDay = await prisma.scheduleDay.create({
@@ -38,6 +97,33 @@ const ScheduleDaysController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-days/{id}:
+     *   put:
+     *     summary: Actualizar un día de horario
+     *     tags: [ScheduleDays]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/ScheduleDay'
+     *     responses:
+     *       200:
+     *         description: Día de horario actualizado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ScheduleDay'
+     */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const scheduleDay = await prisma.scheduleDay.update({
@@ -50,6 +136,23 @@ const ScheduleDaysController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedule-days/{id}:
+     *   delete:
+     *     summary: Eliminar un día de horario
+     *     tags: [ScheduleDays]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       204:
+     *         description: Día de horario eliminado
+     */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             await prisma.scheduleDay.delete({

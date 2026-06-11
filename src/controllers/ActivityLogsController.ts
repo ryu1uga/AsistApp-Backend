@@ -4,6 +4,22 @@ import prisma from "../config/db";
 const ActivityLogsController = () => {
     const router = express.Router();
 
+    /**
+     * @openapi
+     * /activity-logs:
+     *   get:
+     *     summary: Obtener todos los registros de actividad
+     *     tags: [ActivityLogs]
+     *     responses:
+     *       200:
+     *         description: Lista de registros de actividad
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/ActivityLog'
+     */
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const logs = await prisma.activityLog.findMany();
@@ -13,6 +29,29 @@ const ActivityLogsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /activity-logs/{id}:
+     *   get:
+     *     summary: Obtener un registro de actividad por ID
+     *     tags: [ActivityLogs]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Registro de actividad encontrado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ActivityLog'
+     *       404:
+     *         description: Registro de actividad no encontrado
+     */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const log = await prisma.activityLog.findUnique({
@@ -27,6 +66,26 @@ const ActivityLogsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /activity-logs:
+     *   post:
+     *     summary: Crear un registro de actividad
+     *     tags: [ActivityLogs]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/ActivityLog'
+     *     responses:
+     *       201:
+     *         description: Registro de actividad creado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ActivityLog'
+     */
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const log = await prisma.activityLog.create({
@@ -38,6 +97,33 @@ const ActivityLogsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /activity-logs/{id}:
+     *   put:
+     *     summary: Actualizar un registro de actividad
+     *     tags: [ActivityLogs]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/ActivityLog'
+     *     responses:
+     *       200:
+     *         description: Registro de actividad actualizado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ActivityLog'
+     */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const log = await prisma.activityLog.update({
@@ -50,6 +136,23 @@ const ActivityLogsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /activity-logs/{id}:
+     *   delete:
+     *     summary: Eliminar un registro de actividad
+     *     tags: [ActivityLogs]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       204:
+     *         description: Registro de actividad eliminado
+     */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             await prisma.activityLog.delete({

@@ -4,6 +4,22 @@ import prisma from "../config/db";
 const SchedulesController = () => {
     const router = express.Router();
 
+    /**
+     * @openapi
+     * /schedules:
+     *   get:
+     *     summary: Obtener todos los horarios
+     *     tags: [Schedules]
+     *     responses:
+     *       200:
+     *         description: Lista de horarios
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/Schedule'
+     */
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const schedules = await prisma.schedule.findMany();
@@ -13,6 +29,29 @@ const SchedulesController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedules/{id}:
+     *   get:
+     *     summary: Obtener un horario por ID
+     *     tags: [Schedules]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Horario encontrado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Schedule'
+     *       404:
+     *         description: Horario no encontrado
+     */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const schedule = await prisma.schedule.findUnique({
@@ -27,6 +66,26 @@ const SchedulesController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedules:
+     *   post:
+     *     summary: Crear un horario
+     *     tags: [Schedules]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/Schedule'
+     *     responses:
+     *       201:
+     *         description: Horario creado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Schedule'
+     */
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const schedule = await prisma.schedule.create({
@@ -38,6 +97,33 @@ const SchedulesController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedules/{id}:
+     *   put:
+     *     summary: Actualizar un horario
+     *     tags: [Schedules]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/Schedule'
+     *     responses:
+     *       200:
+     *         description: Horario actualizado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Schedule'
+     */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const schedule = await prisma.schedule.update({
@@ -50,6 +136,23 @@ const SchedulesController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /schedules/{id}:
+     *   delete:
+     *     summary: Eliminar un horario
+     *     tags: [Schedules]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       204:
+     *         description: Horario eliminado
+     */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             await prisma.schedule.delete({

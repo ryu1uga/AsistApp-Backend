@@ -2,6 +2,8 @@ import express, { Request, Response } from "express"
 import dotenv from "dotenv"
 import bodyParser from "body-parser"
 import cors from "cors"
+import swaggerUi from "swagger-ui-express"
+import swaggerSpec from "./config/swagger"
 import OrganizationsController from "./controllers/OrganizationsController"
 import UsersController from "./controllers/UsersController"
 import SchedulesController from "./controllers/SchedulesController"
@@ -21,9 +23,9 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 
-app.get("/", (req: Request, resp: Response) => {
-    resp.send("Endpoint raiz de Backend")
-})
+app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: "AsistApp Backend - API Docs"
+}))
 
 app.use("/organizations", OrganizationsController())
 app.use("/users", UsersController())

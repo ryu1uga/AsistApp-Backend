@@ -4,6 +4,22 @@ import prisma from "../config/db";
 const OrganizationsController = () => {
     const router = express.Router();
 
+    /**
+     * @openapi
+     * /organizations:
+     *   get:
+     *     summary: Obtener todas las organizaciones
+     *     tags: [Organizations]
+     *     responses:
+     *       200:
+     *         description: Lista de organizaciones
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/Organization'
+     */
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const organizations = await prisma.organization.findMany();
@@ -13,6 +29,29 @@ const OrganizationsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /organizations/{id}:
+     *   get:
+     *     summary: Obtener una organización por ID
+     *     tags: [Organizations]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Organización encontrada
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Organization'
+     *       404:
+     *         description: Organización no encontrada
+     */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const organization = await prisma.organization.findUnique({
@@ -27,6 +66,26 @@ const OrganizationsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /organizations:
+     *   post:
+     *     summary: Crear una organización
+     *     tags: [Organizations]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/Organization'
+     *     responses:
+     *       201:
+     *         description: Organización creada
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Organization'
+     */
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const organization = await prisma.organization.create({
@@ -38,6 +97,33 @@ const OrganizationsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /organizations/{id}:
+     *   put:
+     *     summary: Actualizar una organización
+     *     tags: [Organizations]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/Organization'
+     *     responses:
+     *       200:
+     *         description: Organización actualizada
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/Organization'
+     */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const organization = await prisma.organization.update({
@@ -50,6 +136,23 @@ const OrganizationsController = () => {
         }
     })
 
+    /**
+     * @openapi
+     * /organizations/{id}:
+     *   delete:
+     *     summary: Eliminar una organización
+     *     tags: [Organizations]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       204:
+     *         description: Organización eliminada
+     */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             await prisma.organization.delete({
