@@ -32,6 +32,40 @@ const ScheduleDaysController = () => {
 
     /**
      * @openapi
+     * /schedule-days/schedule/{scheduleId}:
+     *   get:
+     *     summary: Obtener todos los días de horario de un horario específico
+     *     tags: [ScheduleDays]
+     *     parameters:
+     *       - in: path
+     *         name: scheduleId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Lista de días de horario del horario indicado
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 $ref: '#/components/schemas/ScheduleDay'
+     */
+    router.get("/schedule/:scheduleId", async (req: Request, resp: Response) => {
+        try {
+            const scheduleDays = await prisma.scheduleDay.findMany({
+                where: { scheduleId: req.params.scheduleId as string }
+            });
+            resp.json(scheduleDays);
+        } catch (error) {
+            resp.status(500).json({ error: "Error al obtener los días de horario del horario" });
+        }
+    })
+
+    /**
+     * @openapi
      * /schedule-days/{id}:
      *   get:
      *     summary: Obtener un día de horario por ID
