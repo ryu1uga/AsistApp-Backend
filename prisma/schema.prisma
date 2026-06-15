@@ -10,7 +10,6 @@ datasource db {
 
 enum UserRole {
   admin
-  validator
   trainee
 }
 
@@ -32,6 +31,7 @@ enum DayOfWeek {
   wednesday
   thursday
   friday
+  saturday
 }
 
 enum RequestStatus {
