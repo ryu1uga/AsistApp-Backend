@@ -2,6 +2,15 @@ import express, { Request, Response } from "express";
 import prisma from "../config/db";
 import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "../dtos";
 import { RequestStatus } from "../generated/prisma/enums";
+import { formatTime } from "../utils/formatters";
+
+const serializeScheduleChangeRequest = (req: any) => ({
+    ...req,
+    newCheckInTime: formatTime(req.newCheckInTime),
+    newLunchStartTime: formatTime(req.newLunchStartTime),
+    newLunchEndTime: formatTime(req.newLunchEndTime),
+    newCheckOutTime: formatTime(req.newCheckOutTime),
+});
 
 const ScheduleChangeRequestsController = () => {
     const router = express.Router();
@@ -25,7 +34,7 @@ const ScheduleChangeRequestsController = () => {
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const requests = await prisma.scheduleChangeRequest.findMany();
-            resp.json(requests);
+            resp.json(requests.map(serializeScheduleChangeRequest));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las solicitudes de cambio de horario" });
         }
@@ -62,7 +71,7 @@ const ScheduleChangeRequestsController = () => {
             if (!request) {
                 return resp.status(404).json({ error: "Solicitud de cambio de horario no encontrada" });
             }
-            resp.json(request);
+            resp.json(serializeScheduleChangeRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener la solicitud de cambio de horario" });
         }
@@ -97,7 +106,7 @@ const ScheduleChangeRequestsController = () => {
                     status: RequestStatus.pending
                 }
             });
-            resp.status(201).json(request);
+            resp.status(201).json(serializeScheduleChangeRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la solicitud de cambio de horario" });
         }
@@ -137,7 +146,7 @@ const ScheduleChangeRequestsController = () => {
                 where: { id: req.params.id as string },
                 data
             });
-            resp.json(request);
+            resp.json(serializeScheduleChangeRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la solicitud de cambio de horario" });
         }

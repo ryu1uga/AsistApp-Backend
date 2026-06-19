@@ -2,6 +2,12 @@ import express, { Request, Response } from "express";
 import prisma from "../config/db";
 import { CreateAttendanceRecordDto, UpdateAttendanceRecordDto } from "../dtos";
 import { AttendanceStatus } from "../generated/prisma/enums";
+import { formatDate } from "../utils/formatters";
+
+const serializeAttendanceRecord = (record: any) => ({
+    ...record,
+    date: formatDate(record.date),
+});
 
 const AttendanceRecordsController = () => {
     const router = express.Router();
@@ -25,7 +31,7 @@ const AttendanceRecordsController = () => {
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const records = await prisma.attendanceRecord.findMany();
-            resp.json(records);
+            resp.json(records.map(serializeAttendanceRecord));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los registros de asistencia" });
         }
@@ -62,7 +68,7 @@ const AttendanceRecordsController = () => {
             if (!record) {
                 return resp.status(404).json({ error: "Registro de asistencia no encontrado" });
             }
-            resp.json(record);
+            resp.json(serializeAttendanceRecord(record));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener el registro de asistencia" });
         }
@@ -97,7 +103,7 @@ const AttendanceRecordsController = () => {
                     status: AttendanceStatus.pending
                 }
             });
-            resp.status(201).json(record);
+            resp.status(201).json(serializeAttendanceRecord(record));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el registro de asistencia" });
         }
@@ -137,7 +143,7 @@ const AttendanceRecordsController = () => {
                 where: { id: req.params.id as string },
                 data
             });
-            resp.json(record);
+            resp.json(serializeAttendanceRecord(record));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el registro de asistencia" });
         }

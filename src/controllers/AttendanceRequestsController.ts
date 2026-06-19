@@ -2,6 +2,12 @@ import express, { Request, Response } from "express";
 import prisma from "../config/db";
 import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos";
 import { RequestStatus } from "../generated/prisma/enums";
+import { formatDate } from "../utils/formatters";
+
+const serializeAttendanceRequest = (req: any) => ({
+    ...req,
+    requestedDate: formatDate(req.requestedDate),
+});
 
 const AttendanceRequestsController = () => {
     const router = express.Router();
@@ -25,7 +31,7 @@ const AttendanceRequestsController = () => {
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const requests = await prisma.attendanceRequest.findMany();
-            resp.json(requests);
+            resp.json(requests.map(serializeAttendanceRequest));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las solicitudes de asistencia" });
         }
@@ -62,7 +68,7 @@ const AttendanceRequestsController = () => {
             if (!request) {
                 return resp.status(404).json({ error: "Solicitud de asistencia no encontrada" });
             }
-            resp.json(request);
+            resp.json(serializeAttendanceRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener la solicitud de asistencia" });
         }
@@ -97,7 +103,7 @@ const AttendanceRequestsController = () => {
                     status: RequestStatus.pending
                 }
             });
-            resp.status(201).json(request);
+            resp.status(201).json(serializeAttendanceRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la solicitud de asistencia" });
         }
@@ -137,7 +143,7 @@ const AttendanceRequestsController = () => {
                 where: { id: req.params.id as string },
                 data
             });
-            resp.json(request);
+            resp.json(serializeAttendanceRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la solicitud de asistencia" });
         }

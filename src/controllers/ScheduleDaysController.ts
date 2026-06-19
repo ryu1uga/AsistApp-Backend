@@ -1,6 +1,15 @@
 import express, { Request, Response } from "express";
 import prisma from "../config/db";
 import { CreateScheduleDayDto, UpdateScheduleDayDto } from "../dtos";
+import { formatTime } from "../utils/formatters";
+
+const serializeScheduleDay = (day: any) => ({
+    ...day,
+    checkInTime: formatTime(day.checkInTime),
+    lunchStartTime: formatTime(day.lunchStartTime),
+    lunchEndTime: formatTime(day.lunchEndTime),
+    checkOutTime: formatTime(day.checkOutTime),
+});
 
 const ScheduleDaysController = () => {
     const router = express.Router();
@@ -24,7 +33,7 @@ const ScheduleDaysController = () => {
     router.get("/", async (req: Request, resp: Response) => {
         try {
             const scheduleDays = await prisma.scheduleDay.findMany();
-            resp.json(scheduleDays);
+            resp.json(scheduleDays.map(serializeScheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los días de horario" });
         }
@@ -58,7 +67,7 @@ const ScheduleDaysController = () => {
             const scheduleDays = await prisma.scheduleDay.findMany({
                 where: { scheduleId: req.params.scheduleId as string }
             });
-            resp.json(scheduleDays);
+            resp.json(scheduleDays.map(serializeScheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los días de horario del horario" });
         }
@@ -95,7 +104,7 @@ const ScheduleDaysController = () => {
             if (!scheduleDay) {
                 return resp.status(404).json({ error: "Día de horario no encontrado" });
             }
-            resp.json(scheduleDay);
+            resp.json(serializeScheduleDay(scheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener el día de horario" });
         }
@@ -127,7 +136,7 @@ const ScheduleDaysController = () => {
             const scheduleDay = await prisma.scheduleDay.create({
                 data
             });
-            resp.status(201).json(scheduleDay);
+            resp.status(201).json(serializeScheduleDay(scheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el día de horario" });
         }
@@ -167,7 +176,7 @@ const ScheduleDaysController = () => {
                 where: { id: req.params.id as string },
                 data
             });
-            resp.json(scheduleDay);
+            resp.json(serializeScheduleDay(scheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el día de horario" });
         }
