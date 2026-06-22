@@ -177,7 +177,7 @@ const swaggerSpec = swaggerJsdoc({
                 },
                 CreateUserDto: {
                     type: "object",
-                    required: ["firstName", "lastName", "institutionalEmail", "phoneNumber", "role", "status"],
+                    required: ["firstName", "lastName", "institutionalEmail", "phoneNumber", "role", "status", "password"],
                     properties: {
                         firstName: { type: "string" },
                         lastName: { type: "string" },
@@ -189,6 +189,7 @@ const swaggerSpec = swaggerJsdoc({
                         role: { type: "string", enum: ["admin", "trainee"] },
                         status: { type: "string", enum: ["pending", "active", "rejected"] },
                         deviceToken: { type: "string", nullable: true },
+                        password: { type: "string" },
                     },
                 },
                 UpdateUserDto: {
@@ -204,6 +205,7 @@ const swaggerSpec = swaggerJsdoc({
                         role: { type: "string", enum: ["admin", "trainee"] },
                         status: { type: "string", enum: ["pending", "active", "rejected"] },
                         deviceToken: { type: "string", nullable: true },
+                        password: { type: "string" },
                     },
                 },
                 CreateScheduleDto: {

@@ -83,6 +83,7 @@ model User {
   role               UserRole
   status             UserStatus
   deviceToken        String?  @map("device_token")
+  passwordHash       String   @map("password_hash")
   createdAt          DateTime @default(now()) @db.Timestamp(6)
   updatedAt          DateTime @updatedAt @db.Timestamp(6)
 

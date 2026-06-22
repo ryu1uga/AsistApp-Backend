@@ -11,6 +11,7 @@ export interface CreateUserDto {
     role: UserRole;
     status: UserStatus;
     deviceToken?: string;
+    password: string;
 }
 
 export interface UpdateUserDto extends Partial<CreateUserDto> {}
