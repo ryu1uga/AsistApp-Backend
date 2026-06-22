@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import { usersService } from "../services";
 import { authenticate } from "../middlewares/authenticate";
+import { isValidEmail, isValidRole, isValidStatus } from "../utils/validation";
 
 const UsersController = () => {
     const router = express.Router();
@@ -112,18 +113,17 @@ const UsersController = () => {
             data.institutionalEmail = data.institutionalEmail.trim();
 
             // Email format validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(data.institutionalEmail)) {
+            if (!isValidEmail(data.institutionalEmail)) {
                 return resp.status(400).json({ error: "El formato del correo institucional no es válido" });
             }
 
             // Role enum validation
-            if (data.role !== "admin" && data.role !== "trainee") {
+            if (!isValidRole(data.role)) {
                 return resp.status(400).json({ error: "El campo 'role' debe ser 'admin' o 'trainee'" });
             }
 
             // Status enum validation
-            if (data.status !== "pending" && data.status !== "active" && data.status !== "rejected") {
+            if (!isValidStatus(data.status)) {
                 return resp.status(400).json({ error: "El campo 'status' debe ser 'pending', 'active' o 'rejected'" });
             }
 
@@ -226,10 +226,56 @@ const UsersController = () => {
     router.put("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
             const data: UpdateUserDto = req.body;
+            const currentUser = req.user;
+
+            if (!currentUser) {
+                return resp.status(401).json({ error: "Usuario no autenticado" });
+            }
+
+            // Authorization: Trainee can only update their own profile
+            if (currentUser.role === "trainee") {
+                if (currentUser.id !== req.params.id) {
+                    return resp.status(403).json({ error: "No tienes permiso para actualizar este usuario" });
+                }
+                // Prevent trainee from elevating their own role or status
+                if (data.role) delete data.role;
+                if (data.status) delete data.status;
+            }
+
+            // Validate institutionalEmail format if provided
+            if (data.institutionalEmail) {
+                data.institutionalEmail = data.institutionalEmail.trim();
+                if (!isValidEmail(data.institutionalEmail)) {
+                    return resp.status(400).json({ error: "El formato del correo institucional no es válido" });
+                }
+            }
+
+            // Validate role enum if provided (only possible for admin)
+            if (data.role && !isValidRole(data.role)) {
+                return resp.status(400).json({ error: "El campo 'role' debe ser 'admin' o 'trainee'" });
+            }
+
+            // Validate status enum if provided (only possible for admin)
+            if (data.status && !isValidStatus(data.status)) {
+                return resp.status(400).json({ error: "El campo 'status' debe ser 'pending', 'active' o 'rejected'" });
+            }
+
+            // Validate password if provided
+            if (data.password !== undefined && data.password.trim() === "") {
+                return resp.status(400).json({ error: "La contraseña no puede estar vacía" });
+            }
 
             const user = await usersService.update(req.params.id as string, data);
             resp.json(user);
-        } catch (error) {
+        } catch (error: any) {
+            // Handle Prisma unique constraint violation (duplicate email)
+            if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
+                return resp.status(400).json({ error: "El correo institucional ya está registrado" });
+            }
+            // Handle Prisma record not found error
+            if (error.code === "P2025" || error.message?.includes("Record to update not found")) {
+                return resp.status(404).json({ error: "Usuario no encontrado" });
+            }
             console.error("Error al actualizar el usuario:", error);
             resp.status(500).json({ error: "Error al actualizar el usuario" });
         }

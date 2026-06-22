@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../config/db";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import type { User } from "../generated/prisma/client";
+import { isValidEmail, isValidRole, isValidStatus } from "../utils/validation";
 
 type PublicUser = Omit<User, "passwordHash">;
 
@@ -38,13 +39,13 @@ class UsersService {
         data.firstName = data.firstName.trim();
         data.lastName = data.lastName.trim();
         data.institutionalEmail = data.institutionalEmail.trim();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.institutionalEmail)) {
+        if (!isValidEmail(data.institutionalEmail)) {
             throw new Error("El formato del correo institucional no es válido");
         }
-        if (data.role !== "admin" && data.role !== "trainee") {
+        if (!isValidRole(data.role)) {
             throw new Error("El campo 'role' debe ser 'admin' o 'trainee'");
         }
-        if (data.status !== "pending" && data.status !== "active" && data.status !== "rejected") {
+        if (!isValidStatus(data.status)) {
             throw new Error("El campo 'status' debe ser 'pending', 'active' o 'rejected'");
         }
         const passwordHash = await bcrypt.hash(data.password, 10);
@@ -65,11 +66,20 @@ class UsersService {
     }
 
     async update(id: string, data: UpdateUserDto) {
-        const { password, ...userData } = data;
-        const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+        const prismaData: any = { ...data };
+
+        if (prismaData.firstName) prismaData.firstName = prismaData.firstName.trim();
+        if (prismaData.lastName) prismaData.lastName = prismaData.lastName.trim();
+        if (prismaData.institutionalEmail) prismaData.institutionalEmail = prismaData.institutionalEmail.trim();
+
+        if (prismaData.password) {
+            prismaData.passwordHash = await bcrypt.hash(prismaData.password, 10);
+            delete prismaData.password;
+        }
+
         const user = await prisma.user.update({
             where: { id },
-            data: passwordHash ? { ...userData, passwordHash } : userData
+            data: prismaData
         });
         return withoutPassword(user);
     }

@@ -15,7 +15,10 @@ class OrganizationsService {
     }
 
     update(id: string, data: UpdateOrganizationDto) {
-        return prisma.organization.update({ where: { id }, data });
+        const prismaData: any = { ...data };
+        if (prismaData.name) prismaData.name = prismaData.name.trim();
+        if (prismaData.code) prismaData.code = prismaData.code.trim();
+        return prisma.organization.update({ where: { id }, data: prismaData });
     }
 
     remove(id: string) {
