@@ -1,8 +1,6 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { usersService } from "../services";
 
 const UsersController = () => {
     const router = express.Router();
@@ -25,12 +23,7 @@ const UsersController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const users = await prisma.user.findMany();
-            const usersWithoutPassword = users.map(user => {
-                const { passwordHash, ...rest } = user;
-                return rest;
-            });
-            resp.json(usersWithoutPassword);
+            resp.json(await usersService.findAll());
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los usuarios" });
         }
@@ -61,14 +54,11 @@ const UsersController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const user = await prisma.user.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const user = await usersService.findById(req.params.id as string);
             if (!user) {
                 return resp.status(404).json({ error: "Usuario no encontrado" });
             }
-            const { passwordHash, ...userWithoutPassword } = user;
-            resp.json(userWithoutPassword);
+            resp.json(user);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener el usuario" });
         }
@@ -136,21 +126,8 @@ const UsersController = () => {
                 return resp.status(400).json({ error: "El campo 'status' debe ser 'pending', 'active' o 'rejected'" });
             }
 
-            // Hash password
-            const passwordHash = await bcrypt.hash(data.password, 10);
-
-            // Remove password from payload passed to Prisma
-            const { password, ...prismaData } = data;
-
-            const user = await prisma.user.create({
-                data: {
-                    ...prismaData,
-                    passwordHash
-                }
-            });
-
-            const { passwordHash: _, ...userWithoutPassword } = user;
-            resp.status(201).json(userWithoutPassword);
+            const user = await usersService.register(data);
+            resp.status(201).json(user);
         } catch (error: any) {
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
@@ -204,31 +181,14 @@ const UsersController = () => {
                 return resp.status(400).json({ error: "Email y contraseña son requeridos" });
             }
 
-            const user = await prisma.user.findUnique({
-                where: { institutionalEmail: email }
-            });
-
-            if (!user) {
+            const session = await usersService.login(email, password);
+            if (session === null) {
                 return resp.status(404).json({ error: "Usuario no encontrado" });
             }
-
-            const isMatch = await bcrypt.compare(password, user.passwordHash);
-            if (!isMatch) {
+            if (session === false) {
                 return resp.status(401).json({ error: "Credenciales incorrectas" });
             }
-
-            const token = jwt.sign(
-                { id: user.id, email: user.institutionalEmail, role: user.role },
-                process.env.TOKEN || "PROGRAMOVIL",
-                { expiresIn: "30d" }
-            );
-
-            const { passwordHash: _, ...userWithoutPassword } = user;
-
-            resp.json({
-                token,
-                user: userWithoutPassword
-            });
+            resp.json(session);
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             resp.status(500).json({ error: "Error al iniciar sesión" });
@@ -266,19 +226,8 @@ const UsersController = () => {
         try {
             const data: UpdateUserDto = req.body;
 
-            let prismaData: any = { ...data };
-            if (data.password) {
-                prismaData.passwordHash = await bcrypt.hash(data.password, 10);
-                delete prismaData.password;
-            }
-
-            const user = await prisma.user.update({
-                where: { id: req.params.id as string },
-                data: prismaData
-            });
-
-            const { passwordHash: _, ...userWithoutPassword } = user;
-            resp.json(userWithoutPassword);
+            const user = await usersService.update(req.params.id as string, data);
+            resp.json(user);
         } catch (error) {
             console.error("Error al actualizar el usuario:", error);
             resp.status(500).json({ error: "Error al actualizar el usuario" });
@@ -304,9 +253,7 @@ const UsersController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.user.delete({
-                where: { id: req.params.id as string }
-            });
+            await usersService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el usuario" });

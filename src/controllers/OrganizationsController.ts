@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
+import { organizationsService } from "../services";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "../dtos";
 
 const OrganizationsController = () => {
@@ -23,7 +23,7 @@ const OrganizationsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const organizations = await prisma.organization.findMany();
+            const organizations = await organizationsService.findAll();
             resp.json(organizations);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las organizaciones" });
@@ -55,9 +55,7 @@ const OrganizationsController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const organization = await prisma.organization.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const organization = await organizationsService.findById(req.params.id as string);
             if (!organization) {
                 return resp.status(404).json({ error: "Organización no encontrada" });
             }
@@ -90,9 +88,7 @@ const OrganizationsController = () => {
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const data: CreateOrganizationDto = req.body;
-            const organization = await prisma.organization.create({
-                data
-            });
+            const organization = await organizationsService.create(data);
             resp.status(201).json(organization);
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la organización" });
@@ -129,10 +125,7 @@ const OrganizationsController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateOrganizationDto = req.body;
-            const organization = await prisma.organization.update({
-                where: { id: req.params.id as string },
-                data
-            });
+            const organization = await organizationsService.update(req.params.id as string, data);
             resp.json(organization);
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la organización" });
@@ -158,9 +151,7 @@ const OrganizationsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.organization.delete({
-                where: { id: req.params.id as string }
-            });
+            await organizationsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar la organización" });

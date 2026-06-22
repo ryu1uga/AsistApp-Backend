@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
+import { activityLogsService } from "../services";
 import { CreateActivityLogDto, UpdateActivityLogDto } from "../dtos";
 
 const ActivityLogsController = () => {
@@ -23,7 +23,7 @@ const ActivityLogsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const logs = await prisma.activityLog.findMany();
+            const logs = await activityLogsService.findAll();
             resp.json(logs);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los registros de actividad" });
@@ -55,9 +55,7 @@ const ActivityLogsController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const log = await prisma.activityLog.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const log = await activityLogsService.findById(req.params.id as string);
             if (!log) {
                 return resp.status(404).json({ error: "Registro de actividad no encontrado" });
             }
@@ -90,9 +88,7 @@ const ActivityLogsController = () => {
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const data: CreateActivityLogDto = req.body;
-            const log = await prisma.activityLog.create({
-                data
-            });
+            const log = await activityLogsService.create(data);
             resp.status(201).json(log);
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el registro de actividad" });
@@ -129,10 +125,7 @@ const ActivityLogsController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateActivityLogDto = req.body;
-            const log = await prisma.activityLog.update({
-                where: { id: req.params.id as string },
-                data
-            });
+            const log = await activityLogsService.update(req.params.id as string, data);
             resp.json(log);
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el registro de actividad" });
@@ -158,9 +151,7 @@ const ActivityLogsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.activityLog.delete({
-                where: { id: req.params.id as string }
-            });
+            await activityLogsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el registro de actividad" });

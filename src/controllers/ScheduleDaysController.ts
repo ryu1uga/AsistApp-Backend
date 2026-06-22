@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
+import { scheduleDaysService } from "../services";
 import { CreateScheduleDayDto, UpdateScheduleDayDto } from "../dtos";
 import { formatTime } from "../utils/formatters";
 
@@ -32,7 +32,7 @@ const ScheduleDaysController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const scheduleDays = await prisma.scheduleDay.findMany();
+            const scheduleDays = await scheduleDaysService.findAll();
             resp.json(scheduleDays.map(serializeScheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los días de horario" });
@@ -64,9 +64,7 @@ const ScheduleDaysController = () => {
      */
     router.get("/schedule/:scheduleId", async (req: Request, resp: Response) => {
         try {
-            const scheduleDays = await prisma.scheduleDay.findMany({
-                where: { scheduleId: req.params.scheduleId as string }
-            });
+            const scheduleDays = await scheduleDaysService.findByScheduleId(req.params.scheduleId as string);
             resp.json(scheduleDays.map(serializeScheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los días de horario del horario" });
@@ -98,9 +96,7 @@ const ScheduleDaysController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const scheduleDay = await prisma.scheduleDay.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const scheduleDay = await scheduleDaysService.findById(req.params.id as string);
             if (!scheduleDay) {
                 return resp.status(404).json({ error: "Día de horario no encontrado" });
             }
@@ -133,9 +129,7 @@ const ScheduleDaysController = () => {
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const data: CreateScheduleDayDto = req.body;
-            const scheduleDay = await prisma.scheduleDay.create({
-                data
-            });
+            const scheduleDay = await scheduleDaysService.create(data);
             resp.status(201).json(serializeScheduleDay(scheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el día de horario" });
@@ -172,10 +166,7 @@ const ScheduleDaysController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateScheduleDayDto = req.body;
-            const scheduleDay = await prisma.scheduleDay.update({
-                where: { id: req.params.id as string },
-                data
-            });
+            const scheduleDay = await scheduleDaysService.update(req.params.id as string, data);
             resp.json(serializeScheduleDay(scheduleDay));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el día de horario" });
@@ -201,9 +192,7 @@ const ScheduleDaysController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.scheduleDay.delete({
-                where: { id: req.params.id as string }
-            });
+            await scheduleDaysService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el día de horario" });

@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
+import { schedulesService } from "../services";
 import { CreateScheduleDto, UpdateScheduleDto } from "../dtos";
 
 const SchedulesController = () => {
@@ -23,7 +23,7 @@ const SchedulesController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const schedules = await prisma.schedule.findMany();
+            const schedules = await schedulesService.findAll();
             resp.json(schedules);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los horarios" });
@@ -55,9 +55,7 @@ const SchedulesController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const schedule = await prisma.schedule.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const schedule = await schedulesService.findById(req.params.id as string);
             if (!schedule) {
                 return resp.status(404).json({ error: "Horario no encontrado" });
             }
@@ -90,9 +88,7 @@ const SchedulesController = () => {
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const data: CreateScheduleDto = req.body;
-            const schedule = await prisma.schedule.create({
-                data
-            });
+            const schedule = await schedulesService.create(data);
             resp.status(201).json(schedule);
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el horario" });
@@ -129,10 +125,7 @@ const SchedulesController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateScheduleDto = req.body;
-            const schedule = await prisma.schedule.update({
-                where: { id: req.params.id as string },
-                data
-            });
+            const schedule = await schedulesService.update(req.params.id as string, data);
             resp.json(schedule);
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el horario" });
@@ -158,9 +151,7 @@ const SchedulesController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.schedule.delete({
-                where: { id: req.params.id as string }
-            });
+            await schedulesService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el horario" });

@@ -1,7 +1,6 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
+import { attendanceRequestsService } from "../services";
 import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos";
-import { RequestStatus } from "../generated/prisma/enums";
 import { formatDate } from "../utils/formatters";
 
 const serializeAttendanceRequest = (req: any) => ({
@@ -30,7 +29,7 @@ const AttendanceRequestsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const requests = await prisma.attendanceRequest.findMany();
+            const requests = await attendanceRequestsService.findAll();
             resp.json(requests.map(serializeAttendanceRequest));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las solicitudes de asistencia" });
@@ -62,9 +61,7 @@ const AttendanceRequestsController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const request = await prisma.attendanceRequest.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const request = await attendanceRequestsService.findById(req.params.id as string);
             if (!request) {
                 return resp.status(404).json({ error: "Solicitud de asistencia no encontrada" });
             }
@@ -97,12 +94,7 @@ const AttendanceRequestsController = () => {
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const data: CreateAttendanceRequestDto = req.body;
-            const request = await prisma.attendanceRequest.create({
-                data: {
-                    ...data,
-                    status: RequestStatus.pending
-                }
-            });
+            const request = await attendanceRequestsService.create(data);
             resp.status(201).json(serializeAttendanceRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la solicitud de asistencia" });
@@ -139,10 +131,7 @@ const AttendanceRequestsController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateAttendanceRequestDto = req.body;
-            const request = await prisma.attendanceRequest.update({
-                where: { id: req.params.id as string },
-                data
-            });
+            const request = await attendanceRequestsService.update(req.params.id as string, data);
             resp.json(serializeAttendanceRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la solicitud de asistencia" });
@@ -168,9 +157,7 @@ const AttendanceRequestsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.attendanceRequest.delete({
-                where: { id: req.params.id as string }
-            });
+            await attendanceRequestsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar la solicitud de asistencia" });

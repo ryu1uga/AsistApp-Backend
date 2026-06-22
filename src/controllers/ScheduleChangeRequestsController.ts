@@ -1,7 +1,6 @@
 import express, { Request, Response } from "express";
-import prisma from "../config/db";
+import { scheduleChangeRequestsService } from "../services";
 import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "../dtos";
-import { RequestStatus } from "../generated/prisma/enums";
 import { formatTime } from "../utils/formatters";
 
 const serializeScheduleChangeRequest = (req: any) => ({
@@ -33,7 +32,7 @@ const ScheduleChangeRequestsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const requests = await prisma.scheduleChangeRequest.findMany();
+            const requests = await scheduleChangeRequestsService.findAll();
             resp.json(requests.map(serializeScheduleChangeRequest));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las solicitudes de cambio de horario" });
@@ -65,9 +64,7 @@ const ScheduleChangeRequestsController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
-            const request = await prisma.scheduleChangeRequest.findUnique({
-                where: { id: req.params.id as string }
-            });
+            const request = await scheduleChangeRequestsService.findById(req.params.id as string);
             if (!request) {
                 return resp.status(404).json({ error: "Solicitud de cambio de horario no encontrada" });
             }
@@ -100,12 +97,7 @@ const ScheduleChangeRequestsController = () => {
     router.post("/", async (req: Request, resp: Response) => {
         try {
             const data: CreateScheduleChangeRequestDto = req.body;
-            const request = await prisma.scheduleChangeRequest.create({
-                data: {
-                    ...data,
-                    status: RequestStatus.pending
-                }
-            });
+            const request = await scheduleChangeRequestsService.create(data);
             resp.status(201).json(serializeScheduleChangeRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la solicitud de cambio de horario" });
@@ -142,10 +134,7 @@ const ScheduleChangeRequestsController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateScheduleChangeRequestDto = req.body;
-            const request = await prisma.scheduleChangeRequest.update({
-                where: { id: req.params.id as string },
-                data
-            });
+            const request = await scheduleChangeRequestsService.update(req.params.id as string, data);
             resp.json(serializeScheduleChangeRequest(request));
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la solicitud de cambio de horario" });
@@ -171,9 +160,7 @@ const ScheduleChangeRequestsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
-            await prisma.scheduleChangeRequest.delete({
-                where: { id: req.params.id as string }
-            });
+            await scheduleChangeRequestsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar la solicitud de cambio de horario" });
