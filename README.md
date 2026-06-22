@@ -98,6 +98,30 @@ npx prisma migrate dev --name nombre_de_la_migracion
 
 > `prisma/migrations` se versiona en git: contiene el historial de cambios del esquema y permite reconstruir la base de datos en cualquier equipo.
 
+## 6.1. Cargar datos iniciales (seed)
+
+Con la base de datos levantada y las migraciones aplicadas, ejecuta:
+
+```bash
+npm run db:seed
+```
+
+En PowerShell, si la ejecución de scripts está restringida, usa:
+
+```powershell
+npm.cmd run db:seed
+```
+
+El seed es idempotente: puedes ejecutarlo varias veces sin duplicar datos. Crea o actualiza la organización `ITLAB` (código `ITLAB-1234`) y tres usuarios activos asociados a ella:
+
+| Rol | Nombre | Correo | Contraseña |
+|-----|--------|--------|------------|
+| Administrador | Esteban Terrones | `admin@gmail.com` | `asistapp` |
+| Practicante | Bruno Gutierrez | `practicante@gmail.com` | `asistapp` |
+| Practicante | Carla Escobedo | `practicante2@gmail.com` | `asistapp` |
+
+> Estas credenciales son únicamente para desarrollo. No las uses en producción.
+
 ## 7. Ejecutar el proyecto
 
 ### Modo desarrollo (con recarga automática)
