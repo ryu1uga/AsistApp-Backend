@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import { usersService } from "../services";
+import { authenticate } from "../middlewares/authenticate";
 
 const UsersController = () => {
     const router = express.Router();
@@ -21,7 +22,7 @@ const UsersController = () => {
      *               items:
      *                 $ref: '#/components/schemas/User'
      */
-    router.get("/", async (req: Request, resp: Response) => {
+    router.get("/", authenticate, async (req: Request, resp: Response) => {
         try {
             resp.json(await usersService.findAll());
         } catch (error) {
@@ -52,7 +53,7 @@ const UsersController = () => {
      *       404:
      *         description: Usuario no encontrado
      */
-    router.get("/:id", async (req: Request, resp: Response) => {
+    router.get("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
             const user = await usersService.findById(req.params.id as string);
             if (!user) {
@@ -222,7 +223,7 @@ const UsersController = () => {
      *             schema:
      *               $ref: '#/components/schemas/User'
      */
-    router.put("/:id", async (req: Request, resp: Response) => {
+    router.put("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
             const data: UpdateUserDto = req.body;
 
@@ -251,7 +252,7 @@ const UsersController = () => {
      *       204:
      *         description: Usuario eliminado
      */
-    router.delete("/:id", async (req: Request, resp: Response) => {
+    router.delete("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
             await usersService.remove(req.params.id as string);
             resp.status(204).send();

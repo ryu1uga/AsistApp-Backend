@@ -12,6 +12,7 @@ import ScheduleChangeRequestsController from "./controllers/ScheduleChangeReques
 import AttendanceRecordsController from "./controllers/AttendanceRecordsController"
 import AttendanceRequestsController from "./controllers/AttendanceRequestsController"
 import ActivityLogsController from "./controllers/ActivityLogsController"
+import { authenticate } from "./middlewares/authenticate"
 
 dotenv.config()
 const PORT = process.env.PORT
@@ -48,14 +49,14 @@ app.get("/health", (req: Request, resp: Response) => {
     resp.status(200).json({ status: "ok", timestamp: new Date().toISOString() })
 })
 
-app.use("/organizations", OrganizationsController())
+app.use("/organizations", authenticate, OrganizationsController())
 app.use("/users", UsersController())
-app.use("/schedules", SchedulesController())
-app.use("/schedule-days", ScheduleDaysController())
-app.use("/schedule-change-requests", ScheduleChangeRequestsController())
-app.use("/attendance-records", AttendanceRecordsController())
-app.use("/attendance-requests", AttendanceRequestsController())
-app.use("/activity-logs", ActivityLogsController())
+app.use("/schedules", authenticate, SchedulesController())
+app.use("/schedule-days", authenticate, ScheduleDaysController())
+app.use("/schedule-change-requests", authenticate, ScheduleChangeRequestsController())
+app.use("/attendance-records", authenticate, AttendanceRecordsController())
+app.use("/attendance-requests", authenticate, AttendanceRequestsController())
+app.use("/activity-logs", authenticate, ActivityLogsController())
 
 app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customSiteTitle: "AsistApp Backend - API Docs"
