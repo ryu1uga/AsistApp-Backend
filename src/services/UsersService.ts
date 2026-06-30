@@ -13,8 +13,13 @@ const withoutPassword = (user: User): PublicUser => {
 };
 
 class UsersService {
-    async findAll() {
-        const users = await prisma.user.findMany();
+    async findAll(filters?: { organizationId?: string; status?: string }) {
+        const users = await prisma.user.findMany({
+            where: {
+                ...(filters?.organizationId && { organizationId: filters.organizationId }),
+                ...(filters?.status && { status: filters.status as any }),
+            },
+        });
         return users.map(withoutPassword);
     }
 
@@ -51,7 +56,11 @@ class UsersService {
         const passwordHash = await bcrypt.hash(data.password, 10);
         const { password, ...userData } = data;
         const user = await prisma.user.create({ data: { ...userData, passwordHash } });
-        return withoutPassword(user);
+        const secret = process.env.TOKEN || "PROGRAMOVIL";
+        return {
+            token: jwt.sign({ id: user.id, email: user.institutionalEmail, role: user.role }, secret, { expiresIn: "30d" }),
+            user: withoutPassword(user),
+        };
     }
 
     async login(email: string, password: string) {

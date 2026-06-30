@@ -25,6 +25,14 @@ const OrganizationsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
+            const { code } = req.query;
+            if (code) {
+                const organization = await organizationsService.findByCode(code as string);
+                if (!organization) {
+                    return resp.status(404).json({ error: "Organización no encontrada" });
+                }
+                return resp.json(organization);
+            }
             const organizations = await organizationsService.findAll();
             resp.json(organizations);
         } catch (error) {
@@ -149,11 +157,6 @@ const OrganizationsController = () => {
             // Validation: name if provided cannot be empty
             if (data.name !== undefined && data.name.trim() === "") {
                 return resp.status(400).json({ error: "El nombre de la organización no puede estar vacío" });
-            }
-
-            // Validation: code if provided cannot be empty
-            if (data.code !== undefined && data.code.trim() === "") {
-                return resp.status(400).json({ error: "El código de la organización no puede estar vacío" });
             }
 
             // Validation: lateTimeLimit if provided must be a valid number >= 0

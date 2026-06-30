@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
-import { usersService } from "../services";
+import { usersService, organizationsService } from "../services";
 import { authenticate } from "../middlewares/authenticate";
 import { isValidEmail, isValidRole, isValidStatus } from "../utils/validation";
+import emailService from "../services/EmailService";
 
 const UsersController = () => {
     const router = express.Router();
@@ -25,7 +26,11 @@ const UsersController = () => {
      */
     router.get("/", authenticate, async (req: Request, resp: Response) => {
         try {
-            resp.json(await usersService.findAll());
+            const currentUser = await usersService.findById(req.user!.id);
+            if (!currentUser?.organizationId) {
+                return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+            }
+            resp.json(await usersService.findAll({ organizationId: currentUser.organizationId, status: "pending" }));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los usuarios" });
         }
@@ -127,8 +132,8 @@ const UsersController = () => {
                 return resp.status(400).json({ error: "El campo 'status' debe ser 'pending', 'active' o 'rejected'" });
             }
 
-            const user = await usersService.register(data);
-            resp.status(201).json(user);
+            const session = await usersService.register(data);
+            resp.status(201).json(session);
         } catch (error: any) {
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
@@ -265,8 +270,25 @@ const UsersController = () => {
                 return resp.status(400).json({ error: "La contraseña no puede estar vacía" });
             }
 
+            const sendStatusEmail = data.status === "active" || data.status === "rejected";
+            const existingUser = sendStatusEmail
+                ? await usersService.findById(req.params.id as string)
+                : null;
+
             const user = await usersService.update(req.params.id as string, data);
             resp.json(user);
+
+            if (sendStatusEmail && existingUser) {
+                const orgName = existingUser.organizationId
+                    ? (await organizationsService.findById(existingUser.organizationId))?.name ?? "la organización"
+                    : "la organización";
+
+                if (data.status === "active") {
+                    emailService.sendAccepted(existingUser.institutionalEmail, existingUser.firstName, orgName);
+                } else {
+                    emailService.sendRejected(existingUser.institutionalEmail, existingUser.firstName, orgName);
+                }
+            }
         } catch (error: any) {
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
