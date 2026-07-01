@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
-import { scheduleChangeRequestsService } from "../services";
+import { scheduleChangeRequestsService, scheduleDaysService, usersService } from "../services";
 import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "../dtos";
 import { formatTime } from "../utils/formatters";
+import emailService from "../services/EmailService";
 
 const serializeScheduleChangeRequest = (req: any) => ({
     ...req,
@@ -9,6 +10,13 @@ const serializeScheduleChangeRequest = (req: any) => ({
     newLunchStartTime: formatTime(req.newLunchStartTime),
     newLunchEndTime: formatTime(req.newLunchEndTime),
     newCheckOutTime: formatTime(req.newCheckOutTime),
+    scheduleDay: req.scheduleDay && {
+        ...req.scheduleDay,
+        checkInTime: formatTime(req.scheduleDay.checkInTime),
+        lunchStartTime: formatTime(req.scheduleDay.lunchStartTime),
+        lunchEndTime: formatTime(req.scheduleDay.lunchEndTime),
+        checkOutTime: formatTime(req.scheduleDay.checkOutTime),
+    },
 });
 
 const ScheduleChangeRequestsController = () => {
@@ -18,7 +26,7 @@ const ScheduleChangeRequestsController = () => {
      * @openapi
      * /schedule-change-requests:
      *   get:
-     *     summary: Obtener todas las solicitudes de cambio de horario
+     *     summary: Obtener las solicitudes propias (practicante) o las de la organización (admin)
      *     tags: [ScheduleChangeRequests]
      *     responses:
      *       200:
@@ -32,7 +40,18 @@ const ScheduleChangeRequestsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const requests = await scheduleChangeRequestsService.findAll();
+            const currentUser = req.user!;
+
+            if (currentUser.role === "trainee") {
+                const requests = await scheduleChangeRequestsService.findAll({ userId: currentUser.id });
+                return resp.json(requests.map(serializeScheduleChangeRequest));
+            }
+
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId) {
+                return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+            }
+            const requests = await scheduleChangeRequestsService.findAll({ organizationId: admin.organizationId });
             resp.json(requests.map(serializeScheduleChangeRequest));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las solicitudes de cambio de horario" });
@@ -96,7 +115,17 @@ const ScheduleChangeRequestsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
             const data: CreateScheduleChangeRequestDto = req.body;
+
+            if (currentUser.role === "trainee") {
+                const scheduleDay = await scheduleDaysService.findById(data.scheduleDayId);
+                if (!scheduleDay || (scheduleDay as any).schedule?.userId !== currentUser.id) {
+                    return resp.status(403).json({ error: "No tienes permiso para modificar este día de horario" });
+                }
+                data.userId = currentUser.id;
+            }
+
             const request = await scheduleChangeRequestsService.create(data);
             resp.status(201).json(serializeScheduleChangeRequest(request));
         } catch (error) {
@@ -133,9 +162,33 @@ const ScheduleChangeRequestsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
             const data: UpdateScheduleChangeRequestDto = req.body;
-            const request = await scheduleChangeRequestsService.update(req.params.id as string, data);
+            const requestId = req.params.id as string;
+
+            const existing = await scheduleChangeRequestsService.findById(requestId);
+            if (!existing) {
+                return resp.status(404).json({ error: "Solicitud de cambio de horario no encontrada" });
+            }
+
+            const sendStatusEmail = data.status === "approved" || data.status === "rejected";
+            if (sendStatusEmail) {
+                data.reviewedById = currentUser.id;
+            }
+
+            const request = await scheduleChangeRequestsService.update(requestId, data);
             resp.json(serializeScheduleChangeRequest(request));
+
+            if (sendStatusEmail) {
+                const trainee = await usersService.findById(existing.userId);
+                if (trainee) {
+                    if (data.status === "approved") {
+                        emailService.sendScheduleApproved(trainee.institutionalEmail, trainee.firstName);
+                    } else {
+                        emailService.sendScheduleRejected(trainee.institutionalEmail, trainee.firstName);
+                    }
+                }
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la solicitud de cambio de horario" });
         }

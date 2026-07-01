@@ -1,6 +1,19 @@
 import express, { Request, Response } from "express";
-import { schedulesService } from "../services";
+import { schedulesService, usersService } from "../services";
 import { CreateScheduleDto, UpdateScheduleDto } from "../dtos";
+import { formatTime } from "../utils/formatters";
+import emailService from "../services/EmailService";
+
+const serializeSchedule = (schedule: any) => ({
+    ...schedule,
+    days: schedule.days?.map((day: any) => ({
+        ...day,
+        checkInTime: formatTime(day.checkInTime),
+        lunchStartTime: formatTime(day.lunchStartTime),
+        lunchEndTime: formatTime(day.lunchEndTime),
+        checkOutTime: formatTime(day.checkOutTime),
+    })),
+});
 
 const SchedulesController = () => {
     const router = express.Router();
@@ -9,7 +22,7 @@ const SchedulesController = () => {
      * @openapi
      * /schedules:
      *   get:
-     *     summary: Obtener todos los horarios
+     *     summary: Obtener el horario propio (practicante) o los de la organización (admin)
      *     tags: [Schedules]
      *     responses:
      *       200:
@@ -23,8 +36,19 @@ const SchedulesController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const schedules = await schedulesService.findAll();
-            resp.json(schedules);
+            const currentUser = req.user!;
+
+            if (currentUser.role === "trainee") {
+                const schedules = await schedulesService.findAll({ userId: currentUser.id });
+                return resp.json(schedules.map(serializeSchedule));
+            }
+
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId) {
+                return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+            }
+            const schedules = await schedulesService.findAll({ organizationId: admin.organizationId });
+            resp.json(schedules.map(serializeSchedule));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los horarios" });
         }
@@ -59,7 +83,7 @@ const SchedulesController = () => {
             if (!schedule) {
                 return resp.status(404).json({ error: "Horario no encontrado" });
             }
-            resp.json(schedule);
+            resp.json(serializeSchedule(schedule));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener el horario" });
         }
@@ -87,9 +111,21 @@ const SchedulesController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
             const data: CreateScheduleDto = req.body;
+
+            if (currentUser.role === "trainee") {
+                const trainee = await usersService.findById(currentUser.id);
+                if (!trainee?.organizationId) {
+                    return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+                }
+                data.userId = currentUser.id;
+                data.organizationId = trainee.organizationId;
+                data.status = "pending";
+            }
+
             const schedule = await schedulesService.create(data);
-            resp.status(201).json(schedule);
+            resp.status(201).json(serializeSchedule(schedule));
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el horario" });
         }
@@ -124,9 +160,39 @@ const SchedulesController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
             const data: UpdateScheduleDto = req.body;
-            const schedule = await schedulesService.update(req.params.id as string, data);
-            resp.json(schedule);
+            const scheduleId = req.params.id as string;
+
+            const existingSchedule = await schedulesService.findById(scheduleId);
+            if (!existingSchedule) {
+                return resp.status(404).json({ error: "Horario no encontrado" });
+            }
+
+            if (currentUser.role === "trainee") {
+                if (existingSchedule.userId !== currentUser.id) {
+                    return resp.status(403).json({ error: "No tienes permiso para modificar este horario" });
+                }
+                delete data.userId;
+                delete data.organizationId;
+                data.status = "pending";
+            }
+
+            const sendStatusEmail = data.status === "approved" || data.status === "rejected";
+
+            const schedule = await schedulesService.update(scheduleId, data);
+            resp.json(serializeSchedule(schedule));
+
+            if (sendStatusEmail) {
+                const trainee = await usersService.findById(existingSchedule.userId);
+                if (trainee) {
+                    if (data.status === "approved") {
+                        emailService.sendScheduleApproved(trainee.institutionalEmail, trainee.firstName);
+                    } else {
+                        emailService.sendScheduleRejected(trainee.institutionalEmail, trainee.firstName);
+                    }
+                }
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el horario" });
         }

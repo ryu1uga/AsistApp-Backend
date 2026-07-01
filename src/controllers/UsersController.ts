@@ -30,7 +30,7 @@ const UsersController = () => {
             if (!currentUser?.organizationId) {
                 return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
             }
-            resp.json(await usersService.findAll({ organizationId: currentUser.organizationId, status: "pending" }));
+            resp.json(await usersService.findAll({ organizationId: currentUser.organizationId }));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los usuarios" });
         }
