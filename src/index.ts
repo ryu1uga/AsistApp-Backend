@@ -2,6 +2,7 @@ import express, { Request, Response } from "express"
 import dotenv from "dotenv"
 import bodyParser from "body-parser"
 import cors from "cors"
+import path from "path"
 import swaggerUi from "swagger-ui-express"
 import swaggerSpec from "./config/swagger"
 import OrganizationsController from "./controllers/OrganizationsController"
@@ -12,6 +13,7 @@ import ScheduleChangeRequestsController from "./controllers/ScheduleChangeReques
 import AttendanceRecordsController from "./controllers/AttendanceRecordsController"
 import AttendanceRequestsController from "./controllers/AttendanceRequestsController"
 import ActivityLogsController from "./controllers/ActivityLogsController"
+import UploadsController from "./controllers/UploadsController"
 import { authenticate } from "./middlewares/authenticate"
 
 dotenv.config()
@@ -23,6 +25,7 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({
     extended: true
 }))
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")))
 
 /**
  * @openapi
@@ -57,6 +60,7 @@ app.use("/schedule-change-requests", authenticate, ScheduleChangeRequestsControl
 app.use("/attendance-records", authenticate, AttendanceRecordsController())
 app.use("/attendance-requests", authenticate, AttendanceRequestsController())
 app.use("/activity-logs", authenticate, ActivityLogsController())
+app.use("/uploads", authenticate, UploadsController())
 
 app.use("/", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customSiteTitle: "AsistApp Backend - API Docs"

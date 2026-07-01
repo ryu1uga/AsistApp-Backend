@@ -1,8 +1,7 @@
 import express, { Request, Response } from "express";
-import { organizationsService } from "../services";
+import { organizationsService, usersService } from "../services";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "../dtos";
 import { authenticate } from "../middlewares/authenticate";
-import prisma from "../config/db";
 
 const OrganizationsController = () => {
     const router = express.Router();
@@ -23,7 +22,7 @@ const OrganizationsController = () => {
      *               items:
      *                 $ref: '#/components/schemas/Organization'
      */
-    router.get("/", async (req: Request, resp: Response) => {
+    router.get("/", authenticate, async (req: Request, resp: Response) => {
         try {
             const { code } = req.query;
             if (code) {
@@ -33,8 +32,13 @@ const OrganizationsController = () => {
                 }
                 return resp.json(organization);
             }
-            const organizations = await organizationsService.findAll();
-            resp.json(organizations);
+
+            const currentUser = await usersService.findById(req.user!.id);
+            if (!currentUser?.organizationId) {
+                return resp.json([]);
+            }
+            const organization = await organizationsService.findById(currentUser.organizationId);
+            resp.json(organization ? [organization] : []);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las organizaciones" });
         }
@@ -63,8 +67,13 @@ const OrganizationsController = () => {
      *       404:
      *         description: Organización no encontrada
      */
-    router.get("/:id", async (req: Request, resp: Response) => {
+    router.get("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
+            const currentUser = await usersService.findById(req.user!.id);
+            if (!currentUser?.organizationId || currentUser.organizationId !== req.params.id) {
+                return resp.status(403).json({ error: "No tienes permiso para ver esta organización" });
+            }
+
             const organization = await organizationsService.findById(req.params.id as string);
             if (!organization) {
                 return resp.status(404).json({ error: "Organización no encontrada" });
@@ -95,10 +104,16 @@ const OrganizationsController = () => {
      *             schema:
      *               $ref: '#/components/schemas/Organization'
      */
-    router.post("/", async (req: Request, resp: Response) => {
+    router.post("/", authenticate, async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user;
+            if (!currentUser) {
+                return resp.status(401).json({ error: "Usuario no autenticado" });
+            }
+
             const data: CreateOrganizationDto = req.body;
             const organization = await organizationsService.create(data);
+            await usersService.update(currentUser.id, { organizationId: organization.id });
             resp.status(201).json(organization);
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la organización" });
@@ -147,9 +162,7 @@ const OrganizationsController = () => {
             }
 
             // Fetch user from DB to verify organization ownership
-            const userDb = await prisma.user.findUnique({
-                where: { id: currentUser.id }
-            });
+            const userDb = await usersService.findById(currentUser.id);
             if (!userDb || userDb.organizationId !== req.params.id) {
                 return resp.status(403).json({ error: "No tienes permiso para actualizar esta organización" });
             }
@@ -199,8 +212,18 @@ const OrganizationsController = () => {
      *       204:
      *         description: Organización eliminada
      */
-    router.delete("/:id", async (req: Request, resp: Response) => {
+    router.delete("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
+            if (currentUser.role !== "admin") {
+                return resp.status(403).json({ error: "No tienes permiso para eliminar esta organización" });
+            }
+
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId || admin.organizationId !== req.params.id) {
+                return resp.status(403).json({ error: "No tienes permiso para eliminar esta organización" });
+            }
+
             await organizationsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {

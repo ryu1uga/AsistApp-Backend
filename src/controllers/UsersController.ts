@@ -61,10 +61,22 @@ const UsersController = () => {
      */
     router.get("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
             const user = await usersService.findById(req.params.id as string);
             if (!user) {
                 return resp.status(404).json({ error: "Usuario no encontrado" });
             }
+
+            if (currentUser.role === "trainee" && currentUser.id !== user.id) {
+                return resp.status(403).json({ error: "No tienes permiso para ver este usuario" });
+            }
+            if (currentUser.role === "admin" && currentUser.id !== user.id) {
+                const admin = await usersService.findById(currentUser.id);
+                if (!admin?.organizationId || admin.organizationId !== user.organizationId) {
+                    return resp.status(403).json({ error: "No tienes permiso para ver este usuario" });
+                }
+            }
+
             resp.json(user);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener el usuario" });
@@ -237,6 +249,11 @@ const UsersController = () => {
                 return resp.status(401).json({ error: "Usuario no autenticado" });
             }
 
+            const targetUser = await usersService.findById(req.params.id as string);
+            if (!targetUser) {
+                return resp.status(404).json({ error: "Usuario no encontrado" });
+            }
+
             // Authorization: Trainee can only update their own profile
             if (currentUser.role === "trainee") {
                 if (currentUser.id !== req.params.id) {
@@ -245,6 +262,24 @@ const UsersController = () => {
                 // Prevent trainee from elevating their own role or status
                 if (data.role) delete data.role;
                 if (data.status) delete data.status;
+                // Solo puede fijar su propio organizationId la primera vez (código de organización);
+                // una vez asignado, no puede reasignarse a otra organización.
+                if (data.organizationId !== undefined && targetUser.organizationId !== null) {
+                    delete data.organizationId;
+                }
+            } else {
+                // Authorization: Admin can only manage users within their own organization
+                const admin = await usersService.findById(currentUser.id);
+                if (!admin?.organizationId || admin.organizationId !== targetUser.organizationId) {
+                    return resp.status(403).json({ error: "No tienes permiso para actualizar este usuario" });
+                }
+                if (
+                    data.organizationId !== undefined &&
+                    data.organizationId !== null &&
+                    data.organizationId !== admin.organizationId
+                ) {
+                    return resp.status(403).json({ error: "No puedes asignar este usuario a otra organización" });
+                }
             }
 
             // Validate institutionalEmail format if provided
@@ -271,22 +306,19 @@ const UsersController = () => {
             }
 
             const sendStatusEmail = data.status === "active" || data.status === "rejected";
-            const existingUser = sendStatusEmail
-                ? await usersService.findById(req.params.id as string)
-                : null;
 
             const user = await usersService.update(req.params.id as string, data);
             resp.json(user);
 
-            if (sendStatusEmail && existingUser) {
-                const orgName = existingUser.organizationId
-                    ? (await organizationsService.findById(existingUser.organizationId))?.name ?? "la organización"
+            if (sendStatusEmail) {
+                const orgName = targetUser.organizationId
+                    ? (await organizationsService.findById(targetUser.organizationId))?.name ?? "la organización"
                     : "la organización";
 
                 if (data.status === "active") {
-                    emailService.sendAccepted(existingUser.institutionalEmail, existingUser.firstName, orgName);
+                    emailService.sendAccepted(targetUser.institutionalEmail, targetUser.firstName, orgName);
                 } else {
-                    emailService.sendRejected(existingUser.institutionalEmail, existingUser.firstName, orgName);
+                    emailService.sendRejected(targetUser.institutionalEmail, targetUser.firstName, orgName);
                 }
             }
         } catch (error: any) {
@@ -322,6 +354,22 @@ const UsersController = () => {
      */
     router.delete("/:id", authenticate, async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
+            if (currentUser.role !== "admin") {
+                return resp.status(403).json({ error: "No tienes permiso para eliminar usuarios" });
+            }
+
+            const [admin, targetUser] = await Promise.all([
+                usersService.findById(currentUser.id),
+                usersService.findById(req.params.id as string),
+            ]);
+            if (!targetUser) {
+                return resp.status(404).json({ error: "Usuario no encontrado" });
+            }
+            if (!admin?.organizationId || admin.organizationId !== targetUser.organizationId) {
+                return resp.status(403).json({ error: "No tienes permiso para eliminar este usuario" });
+            }
+
             await usersService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
