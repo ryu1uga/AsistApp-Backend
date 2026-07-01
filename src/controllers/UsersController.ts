@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import { usersService, organizationsService } from "../services";
 import { authenticate } from "../middlewares/authenticate";
-import { isValidEmail, isValidRole, isValidStatus } from "../utils/validation";
+import { isValidEmail, isValidRole, isValidStatus, ValidationError } from "../utils/validation";
 import emailService from "../services/EmailService";
 
 const UsersController = () => {
@@ -106,47 +106,12 @@ const UsersController = () => {
     router.post("/register", async (req: Request, resp: Response) => {
         try {
             const data: CreateUserDto = req.body;
-            
-            // Validate all required fields
-            const requiredFields: (keyof CreateUserDto)[] = [
-                "firstName",
-                "lastName",
-                "institutionalEmail",
-                "phoneNumber",
-                "role",
-                "status",
-                "password"
-            ];
-
-            for (const field of requiredFields) {
-                if (!data[field]) {
-                    return resp.status(400).json({ error: `El campo '${field}' es obligatorio` });
-                }
-            }
-
-            // Clean whitespaces from names and email
-            data.firstName = data.firstName.trim();
-            data.lastName = data.lastName.trim();
-            data.institutionalEmail = data.institutionalEmail.trim();
-
-            // Email format validation
-            if (!isValidEmail(data.institutionalEmail)) {
-                return resp.status(400).json({ error: "El formato del correo institucional no es válido" });
-            }
-
-            // Role enum validation
-            if (!isValidRole(data.role)) {
-                return resp.status(400).json({ error: "El campo 'role' debe ser 'admin' o 'trainee'" });
-            }
-
-            // Status enum validation
-            if (!isValidStatus(data.status)) {
-                return resp.status(400).json({ error: "El campo 'status' debe ser 'pending', 'active' o 'rejected'" });
-            }
-
             const session = await usersService.register(data);
             resp.status(201).json(session);
         } catch (error: any) {
+            if (error instanceof ValidationError) {
+                return resp.status(400).json({ error: error.message });
+            }
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
                 return resp.status(400).json({ error: "El correo institucional ya está registrado" });

@@ -1,6 +1,17 @@
 import { UserRole, UserStatus } from "../generated/prisma/enums";
 
 /**
+ * Error de validación de negocio. Los controllers la atrapan y la traducen
+ * a un 400 en vez de dejar que caiga como un 500 genérico.
+ */
+export class ValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ValidationError";
+    }
+}
+
+/**
  * Valida si un correo electrónico tiene formato correcto.
  */
 export const isValidEmail = (email: string): boolean => {

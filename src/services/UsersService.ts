@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../config/db";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import type { User } from "../generated/prisma/client";
-import { isValidEmail, isValidRole, isValidStatus } from "../utils/validation";
+import { isValidEmail, isValidRole, isValidStatus, ValidationError } from "../utils/validation";
 
 type PublicUser = Omit<User, "passwordHash">;
 
@@ -39,19 +39,19 @@ class UsersService {
             "password"
         ];
         for (const field of requiredFields) {
-            if (!data[field]) throw new Error(`El campo '${field}' es obligatorio`);
+            if (!data[field]) throw new ValidationError(`El campo '${field}' es obligatorio`);
         }
         data.firstName = data.firstName.trim();
         data.lastName = data.lastName.trim();
         data.institutionalEmail = data.institutionalEmail.trim();
         if (!isValidEmail(data.institutionalEmail)) {
-            throw new Error("El formato del correo institucional no es válido");
+            throw new ValidationError("El formato del correo institucional no es válido");
         }
         if (!isValidRole(data.role)) {
-            throw new Error("El campo 'role' debe ser 'admin' o 'trainee'");
+            throw new ValidationError("El campo 'role' debe ser 'admin' o 'trainee'");
         }
         if (!isValidStatus(data.status)) {
-            throw new Error("El campo 'status' debe ser 'pending', 'active' o 'rejected'");
+            throw new ValidationError("El campo 'status' debe ser 'pending', 'active' o 'rejected'");
         }
         const passwordHash = await bcrypt.hash(data.password, 10);
         const { password, ...userData } = data;
