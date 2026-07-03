@@ -89,6 +89,7 @@ const UsersController = () => {
      *   post:
      *     summary: Registrar un nuevo usuario
      *     tags: [Users]
+     *     security: []
      *     requestBody:
      *       required: true
      *       content:
@@ -127,6 +128,7 @@ const UsersController = () => {
      *   post:
      *     summary: Iniciar sesión de usuario
      *     tags: [Users]
+     *     security: []
      *     requestBody:
      *       required: true
      *       content:

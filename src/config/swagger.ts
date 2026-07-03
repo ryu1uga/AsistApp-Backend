@@ -28,6 +28,14 @@ const swaggerSpec = swaggerJsdoc({
         },
         servers,
         components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: "http",
+                    scheme: "bearer",
+                    bearerFormat: "JWT",
+                    description: "Ingresa el token JWT obtenido en /users/login",
+                },
+            },
             schemas: {
                 Organization: {
                     type: "object",
@@ -348,6 +356,7 @@ const swaggerSpec = swaggerJsdoc({
                 },
             },
         },
+        security: [{ bearerAuth: [] }],
     },
     apis: ["./src/controllers/*.ts", "./dist/controllers/*.js"],
 });
