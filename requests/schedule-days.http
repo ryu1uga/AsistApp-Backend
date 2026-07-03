@@ -1,0 +1,41 @@
+@baseUrl = http://localhost:8080/
+
+### Listar días de horarios
+GET {{baseUrl}}schedule-days
+Authorization: Bearer {{token}}
+
+### Listar días de un horario
+GET {{baseUrl}}schedule-days/schedule/{{scheduleId}}
+Authorization: Bearer {{token}}
+
+### Obtener día de horario
+GET {{baseUrl}}schedule-days/{{scheduleDayId}}
+Authorization: Bearer {{token}}
+
+### Crear día de horario
+POST {{baseUrl}}schedule-days
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "scheduleId": "{{scheduleId}}",
+  "day": "tuesday",
+  "checkInTime": "08:00",
+  "lunchStartTime": "13:00",
+  "lunchEndTime": "14:00",
+  "checkOutTime": "17:00"
+}
+
+### Actualizar día de horario
+PUT {{baseUrl}}schedule-days/{{scheduleDayId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "checkInTime": "08:30",
+  "checkOutTime": "17:30"
+}
+
+### Eliminar día de horario
+DELETE {{baseUrl}}schedule-days/{{scheduleDayId}}
+Authorization: Bearer {{token}}

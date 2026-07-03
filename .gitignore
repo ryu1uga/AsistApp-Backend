@@ -4,3 +4,6 @@ dist
 /dist
 /uploads/*
 !/uploads/.gitkeep
+
+# Variables privadas para REST Client
+rest-client.env.json

@@ -1,0 +1,44 @@
+@baseUrl = http://localhost:8080/
+
+### Listar horarios
+GET {{baseUrl}}schedules
+Authorization: Bearer {{token}}
+
+### Obtener horario
+GET {{baseUrl}}schedules/{{scheduleId}}
+Authorization: Bearer {{token}}
+
+### Crear horario
+POST {{baseUrl}}schedules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "organizationId": "{{organizationId}}",
+  "weeklyHours": 40,
+  "status": "pending",
+  "days": [
+    {
+      "day": "monday",
+      "checkInTime": "08:00",
+      "lunchStartTime": "13:00",
+      "lunchEndTime": "14:00",
+      "checkOutTime": "17:00"
+    }
+  ]
+}
+
+### Actualizar horario
+PUT {{baseUrl}}schedules/{{scheduleId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "weeklyHours": 42,
+  "status": "approved"
+}
+
+### Eliminar horario
+DELETE {{baseUrl}}schedules/{{scheduleId}}
+Authorization: Bearer {{token}}

@@ -1,0 +1,35 @@
+@baseUrl = http://localhost:8080/
+
+### Listar registros de actividad
+GET {{baseUrl}}activity-logs
+Authorization: Bearer {{token}}
+
+### Obtener registro de actividad
+GET {{baseUrl}}activity-logs/{{activityLogId}}
+Authorization: Bearer {{token}}
+
+### Crear registro de actividad
+POST {{baseUrl}}activity-logs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "organizationId": "{{organizationId}}",
+  "performedById": "{{userId}}",
+  "affectedUserId": "{{userId}}",
+  "title": "Registro creado desde REST Client",
+  "category": "members"
+}
+
+### Actualizar registro de actividad
+PUT {{baseUrl}}activity-logs/{{activityLogId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Registro actualizado"
+}
+
+### Eliminar registro de actividad
+DELETE {{baseUrl}}activity-logs/{{activityLogId}}
+Authorization: Bearer {{token}}

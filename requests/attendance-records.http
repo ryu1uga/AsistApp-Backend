@@ -1,0 +1,37 @@
+@baseUrl = http://localhost:8080/
+
+### Listar registros de asistencia
+GET {{baseUrl}}attendance-records
+Authorization: Bearer {{token}}
+
+### Obtener registro de asistencia
+GET {{baseUrl}}attendance-records/{{attendanceRecordId}}
+Authorization: Bearer {{token}}
+
+### Crear registro de asistencia
+POST {{baseUrl}}attendance-records
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "organizationId": "{{organizationId}}",
+  "date": "2026-07-03",
+  "checkIn": "2026-07-03T08:00:00.000Z",
+  "autoCheckout": false
+}
+
+### Actualizar registro de asistencia
+PUT {{baseUrl}}attendance-records/{{attendanceRecordId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "checkOut": "2026-07-03T17:00:00.000Z",
+  "status": "confirmed",
+  "totalMinutes": 480
+}
+
+### Eliminar registro de asistencia
+DELETE {{baseUrl}}attendance-records/{{attendanceRecordId}}
+Authorization: Bearer {{token}}

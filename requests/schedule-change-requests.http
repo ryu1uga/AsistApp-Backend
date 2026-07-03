@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:8080/
+
+### Listar solicitudes de cambio de horario
+GET {{baseUrl}}schedule-change-requests
+Authorization: Bearer {{token}}
+
+### Obtener solicitud de cambio de horario
+GET {{baseUrl}}schedule-change-requests/{{scheduleChangeRequestId}}
+Authorization: Bearer {{token}}
+
+### Crear solicitud de cambio de horario
+POST {{baseUrl}}schedule-change-requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "scheduleDayId": "{{scheduleDayId}}",
+  "newCheckInTime": "09:00",
+  "newCheckOutTime": "18:00",
+  "reason": "Cambio excepcional de horario"
+}
+
+### Aprobar solicitud de cambio de horario
+PUT {{baseUrl}}schedule-change-requests/{{scheduleChangeRequestId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewedById": "{{userId}}"
+}
+
+### Eliminar solicitud de cambio de horario
+DELETE {{baseUrl}}schedule-change-requests/{{scheduleChangeRequestId}}
+Authorization: Bearer {{token}}

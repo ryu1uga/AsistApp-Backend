@@ -1,0 +1,35 @@
+@baseUrl = http://localhost:8080/
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjJhNDBmNjU4LWNiMjEtNDNmYi1hZGMzLWU0NDA3YmYyMWFiNyIsImVtYWlsIjoiYWRtaW5AZ21haWwuY29tIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzgzMDg2NDE4LCJleHAiOjE3ODU2Nzg0MTh9.cjt456PCHYMlmNxe4aE-IhssOCn64fzjH4sWYyg6vyw
+
+
+### Buscar organización por código
+GET {{baseUrl}}organizations?code=ITLAB-1234
+Authorization: Bearer {{token}}
+
+### Obtener organización
+GET {{baseUrl}}organizations/3531e419-dfc3-4365-b8c9-02fc611fff1b
+Authorization: Bearer {{token}}
+
+### Crear organización
+POST {{baseUrl}}organizations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "SAPLAB",
+  "description": "Lab de iot",
+  "lateTimeLimit": 10
+}
+
+### Actualizar organización
+PUT {{baseUrl}}organizations/3531e419-dfc3-4365-b8c9-02fc611fff1b
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "ITLAB"
+}
+
+### Eliminar organización
+DELETE {{baseUrl}}organizations/3531e419-dfc3-4365-b8c9-02fc611fff1b
+Authorization: Bearer {{token}}

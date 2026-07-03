@@ -111,6 +111,10 @@ const OrganizationsController = () => {
                 return resp.status(401).json({ error: "Usuario no autenticado" });
             }
 
+            if (currentUser.role !== "admin") {
+                return resp.status(403).json({ error: "No tienes permiso para crear una organización" });
+            }
+
             const data: CreateOrganizationDto = req.body;
             const organization = await organizationsService.create(data);
             await usersService.update(currentUser.id, { organizationId: organization.id });

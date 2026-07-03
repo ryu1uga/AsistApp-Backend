@@ -1,0 +1,13 @@
+@baseUrl = http://localhost:8080/
+
+### Subir archivo
+POST {{baseUrl}}uploads
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=AsistAppBoundary
+
+--AsistAppBoundary
+Content-Disposition: form-data; name="file"; filename="imagen.png"
+Content-Type: image/png
+
+< ./imagen.png
+--AsistAppBoundary--

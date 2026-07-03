@@ -1,0 +1,45 @@
+@baseUrl = http://localhost:8080/
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijc2NGIwMWFhLTNkMGUtNDNlYy1iNzU0LWVkZjVhNjk2OTRiNSIsImVtYWlsIjoicHJhY3RpY2FudGVAZ21haWwuY29tIiwicm9sZSI6InRyYWluZWUiLCJpYXQiOjE3ODMwODUwMzUsImV4cCI6MTc4NTY3NzAzNX0.1a0sBYrMatVZLw8iU3P0VCVMaoPJFPOxRRokQRPekRc
+Content-Type: application/json
+
+{
+  "firstName": "Juan",
+  "lastName": "Padilla",
+  "institutionalEmail": "jd@gmail.com",
+  "phoneNumber": "999999999",
+  "career": "Ingenieria de Sistemas",
+  "cycle": 5,
+  "role": "trainee",
+  "status": "active",
+  "password": "123123123"
+}
+
+### Iniciar sesión
+POST {{baseUrl}}users/login
+Content-Type: application/json
+
+{
+  "email": "admin@gmail.com",
+  "password": "asistapp"
+}
+
+### Listar usuarios
+GET {{baseUrl}}users
+Authorization: Bearer {{token}}
+
+### Obtener usuario
+GET {{baseUrl}}users/764b01aa-3d0e-43ec-b754-edf5a69694b5
+Authorization: Bearer {{token}}
+
+### Actualizar usuario
+PUT {{baseUrl}}users/764b01aa-3d0e-43ec-b754-edf5a69694b5
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "Brunito"
+}
+
+### Eliminar usuario
+DELETE {{baseUrl}}users/764b01aa-3d0e-43ec-b754-edf5a69694b5
+Authorization: Bearer {{token}}

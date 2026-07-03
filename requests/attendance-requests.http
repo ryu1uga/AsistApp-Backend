@@ -1,0 +1,35 @@
+@baseUrl = http://localhost:8080/
+
+### Listar solicitudes de asistencia
+GET {{baseUrl}}attendance-requests
+Authorization: Bearer {{token}}
+
+### Obtener solicitud de asistencia
+GET {{baseUrl}}attendance-requests/{{attendanceRequestId}}
+Authorization: Bearer {{token}}
+
+### Crear solicitud de asistencia
+POST {{baseUrl}}attendance-requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "organizationId": "{{organizationId}}",
+  "requestedDate": "2026-07-03",
+  "reason": "Corrección del registro de asistencia"
+}
+
+### Aprobar solicitud de asistencia
+PUT {{baseUrl}}attendance-requests/{{attendanceRequestId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewedById": "{{userId}}"
+}
+
+### Eliminar solicitud de asistencia
+DELETE {{baseUrl}}attendance-requests/{{attendanceRequestId}}
+Authorization: Bearer {{token}}

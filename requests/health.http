@@ -1,0 +1,4 @@
+@baseUrl = http://localhost:8080/
+
+### Comprobar el estado del servidor
+GET {{baseUrl}}health
