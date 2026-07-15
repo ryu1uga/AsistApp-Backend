@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { attendanceRequestsService } from "../services";
+import { attendanceRequestsService, usersService } from "../services";
 import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos";
 import { formatDate } from "../utils/formatters";
 
@@ -29,7 +29,18 @@ const AttendanceRequestsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const requests = await attendanceRequestsService.findAll();
+            const currentUser = req.user!;
+
+            if (currentUser.role === "trainee") {
+                const requests = await attendanceRequestsService.findAll({ userId: currentUser.id });
+                return resp.json(requests.map(serializeAttendanceRequest));
+            }
+
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId) {
+                return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+            }
+            const requests = await attendanceRequestsService.findAll({ organizationId: admin.organizationId });
             resp.json(requests.map(serializeAttendanceRequest));
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener las solicitudes de asistencia" });

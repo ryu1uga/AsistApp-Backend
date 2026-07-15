@@ -3,8 +3,14 @@ import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos"
 import { RequestStatus } from "../generated/prisma/enums";
 
 class AttendanceRequestsService {
-    findAll() {
-        return prisma.attendanceRequest.findMany();
+    findAll(filters?: { userId?: string; organizationId?: string }) {
+        return prisma.attendanceRequest.findMany({
+            where: {
+                ...(filters?.userId && { userId: filters.userId }),
+                ...(filters?.organizationId && { organizationId: filters.organizationId }),
+            },
+            orderBy: { createdAt: "desc" },
+        });
     }
 
     findById(id: string) {

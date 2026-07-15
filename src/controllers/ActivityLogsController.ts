@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { activityLogsService } from "../services";
+import { activityLogsService, usersService } from "../services";
 import { CreateActivityLogDto, UpdateActivityLogDto } from "../dtos";
 
 const ActivityLogsController = () => {
@@ -23,7 +23,11 @@ const ActivityLogsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const logs = await activityLogsService.findAll();
+            const currentUser = await usersService.findById(req.user!.id);
+            if (!currentUser?.organizationId) {
+                return resp.json([]);
+            }
+            const logs = await activityLogsService.findAll({ organizationId: currentUser.organizationId });
             resp.json(logs);
         } catch (error) {
             resp.status(500).json({ error: "Error al obtener los registros de actividad" });

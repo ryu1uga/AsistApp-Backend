@@ -2,8 +2,13 @@ import prisma from "../config/db";
 import { CreateActivityLogDto, UpdateActivityLogDto } from "../dtos";
 
 class ActivityLogsService {
-    findAll() {
-        return prisma.activityLog.findMany();
+    findAll(filters?: { organizationId?: string }) {
+        return prisma.activityLog.findMany({
+            where: {
+                ...(filters?.organizationId && { organizationId: filters.organizationId }),
+            },
+            orderBy: { createdAt: "desc" },
+        });
     }
 
     findById(id: string) {

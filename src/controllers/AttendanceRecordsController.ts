@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { attendanceRecordsService } from "../services";
+import { attendanceRecordsService, usersService } from "../services";
 import { CreateAttendanceRecordDto, UpdateAttendanceRecordDto } from "../dtos";
 import { formatDate } from "../utils/formatters";
 
@@ -29,9 +29,21 @@ const AttendanceRecordsController = () => {
      */
     router.get("/", async (req: Request, resp: Response) => {
         try {
-            const records = await attendanceRecordsService.findAll();
+            const currentUser = req.user!;
+
+            if (currentUser.role === "trainee") {
+                const records = await attendanceRecordsService.findAll({ userId: currentUser.id });
+                return resp.json(records.map(serializeAttendanceRecord));
+            }
+
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId) {
+                return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+            }
+            const records = await attendanceRecordsService.findAll({ organizationId: admin.organizationId });
             resp.json(records.map(serializeAttendanceRecord));
         } catch (error) {
+            console.error("[AttendanceRecords][GET /]", error);
             resp.status(500).json({ error: "Error al obtener los registros de asistencia" });
         }
     })
@@ -67,6 +79,7 @@ const AttendanceRecordsController = () => {
             }
             resp.json(serializeAttendanceRecord(record));
         } catch (error) {
+            console.error("[AttendanceRecords][GET /:id]", error);
             resp.status(500).json({ error: "Error al obtener el registro de asistencia" });
         }
     })
@@ -97,7 +110,11 @@ const AttendanceRecordsController = () => {
             const record = await attendanceRecordsService.create(data);
             resp.status(201).json(serializeAttendanceRecord(record));
         } catch (error) {
-            resp.status(500).json({ error: "Error al crear el registro de asistencia" });
+            console.error("[AttendanceRecords][POST /]", error);
+            resp.status(500).json({
+                error: "Error al crear el registro de asistencia",
+                detail: error instanceof Error ? error.message : String(error),
+            });
         }
     })
 
@@ -134,7 +151,11 @@ const AttendanceRecordsController = () => {
             const record = await attendanceRecordsService.update(req.params.id as string, data);
             resp.json(serializeAttendanceRecord(record));
         } catch (error) {
-            resp.status(500).json({ error: "Error al actualizar el registro de asistencia" });
+            console.error("[AttendanceRecords][PUT /:id]", error);
+            resp.status(500).json({
+                error: "Error al actualizar el registro de asistencia",
+                detail: error instanceof Error ? error.message : String(error),
+            });
         }
     })
 
@@ -160,6 +181,7 @@ const AttendanceRecordsController = () => {
             await attendanceRecordsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
+            console.error("[AttendanceRecords][DELETE /:id]", error);
             resp.status(500).json({ error: "Error al eliminar el registro de asistencia" });
         }
     })
