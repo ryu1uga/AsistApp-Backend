@@ -12,6 +12,26 @@ export class ValidationError extends Error {
 }
 
 /**
+ * Error de autorización de negocio (403).
+ */
+export class ForbiddenError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ForbiddenError";
+    }
+}
+
+/**
+ * Error de recurso no encontrado (404).
+ */
+export class NotFoundError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "NotFoundError";
+    }
+}
+
+/**
  * Valida si un correo electrónico tiene formato correcto.
  */
 export const isValidEmail = (email: string): boolean => {

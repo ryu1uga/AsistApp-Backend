@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { organizationsService, usersService } from "../services";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "../dtos";
 import { authenticate } from "../middlewares/authenticate";
+import { ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
 
 const OrganizationsController = () => {
     const router = express.Router();
@@ -160,32 +161,18 @@ const OrganizationsController = () => {
                 return resp.status(401).json({ error: "Usuario no autenticado" });
             }
 
-            // Authorization: Only admin can update an organization
-            if (currentUser.role !== "admin") {
-                return resp.status(403).json({ error: "No tienes permiso para actualizar esta organización" });
-            }
-
-            // Fetch user from DB to verify organization ownership
-            const userDb = await usersService.findById(currentUser.id);
-            if (!userDb || userDb.organizationId !== req.params.id) {
-                return resp.status(403).json({ error: "No tienes permiso para actualizar esta organización" });
-            }
-
-            // Validation: name if provided cannot be empty
-            if (data.name !== undefined && data.name.trim() === "") {
-                return resp.status(400).json({ error: "El nombre de la organización no puede estar vacío" });
-            }
-
-            // Validation: lateTimeLimit if provided must be a valid number >= 0
-            if (data.lateTimeLimit !== undefined) {
-                if (typeof data.lateTimeLimit !== "number" || data.lateTimeLimit < 0) {
-                    return resp.status(400).json({ error: "El límite de tiempo de tardanza debe ser un número entero mayor o igual a 0" });
-                }
-            }
-
-            const organization = await organizationsService.update(req.params.id as string, data);
+            const organization = await organizationsService.update(req.params.id as string, data, currentUser);
             resp.json(organization);
         } catch (error: any) {
+            if (error instanceof ValidationError) {
+                return resp.status(400).json({ error: error.message });
+            }
+            if (error instanceof ForbiddenError) {
+                return resp.status(403).json({ error: error.message });
+            }
+            if (error instanceof NotFoundError) {
+                return resp.status(404).json({ error: error.message });
+            }
             // Handle Prisma unique constraint violation (duplicate code)
             if (error.code === "P2002" && error.meta?.target?.includes("code")) {
                 return resp.status(400).json({ error: "El código de la organización ya está registrado" });

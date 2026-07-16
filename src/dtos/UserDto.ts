@@ -9,7 +9,7 @@ export interface CreateUserDto {
     cycle?: number;
     organizationId?: string;
     role: UserRole;
-    status: UserStatus;
+    status?: UserStatus;
     deviceToken?: string;
     password: string;
 }

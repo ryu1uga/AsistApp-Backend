@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import { usersService, organizationsService } from "../services";
 import { authenticate } from "../middlewares/authenticate";
-import { isValidEmail, isValidRole, isValidStatus, ValidationError } from "../utils/validation";
+import { isValidEmail, isValidRole, isValidStatus, ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
 import emailService from "../services/EmailService";
 
 const UsersController = () => {
@@ -217,67 +217,12 @@ const UsersController = () => {
             }
 
             const targetUser = await usersService.findById(req.params.id as string);
-            if (!targetUser) {
-                return resp.status(404).json({ error: "Usuario no encontrado" });
-            }
 
-            // Authorization: Trainee can only update their own profile
-            if (currentUser.role === "trainee") {
-                if (currentUser.id !== req.params.id) {
-                    return resp.status(403).json({ error: "No tienes permiso para actualizar este usuario" });
-                }
-                // Prevent trainee from elevating their own role or status
-                if (data.role) delete data.role;
-                if (data.status) delete data.status;
-                // Solo puede fijar su propio organizationId la primera vez (código de organización);
-                // una vez asignado, no puede reasignarse a otra organización.
-                if (data.organizationId !== undefined && targetUser.organizationId !== null) {
-                    delete data.organizationId;
-                }
-            } else {
-                // Authorization: Admin can only manage users within their own organization
-                const admin = await usersService.findById(currentUser.id);
-                if (!admin?.organizationId || admin.organizationId !== targetUser.organizationId) {
-                    return resp.status(403).json({ error: "No tienes permiso para actualizar este usuario" });
-                }
-                if (
-                    data.organizationId !== undefined &&
-                    data.organizationId !== null &&
-                    data.organizationId !== admin.organizationId
-                ) {
-                    return resp.status(403).json({ error: "No puedes asignar este usuario a otra organización" });
-                }
-            }
-
-            // Validate institutionalEmail format if provided
-            if (data.institutionalEmail) {
-                data.institutionalEmail = data.institutionalEmail.trim();
-                if (!isValidEmail(data.institutionalEmail)) {
-                    return resp.status(400).json({ error: "El formato del correo institucional no es válido" });
-                }
-            }
-
-            // Validate role enum if provided (only possible for admin)
-            if (data.role && !isValidRole(data.role)) {
-                return resp.status(400).json({ error: "El campo 'role' debe ser 'admin' o 'trainee'" });
-            }
-
-            // Validate status enum if provided (only possible for admin)
-            if (data.status && !isValidStatus(data.status)) {
-                return resp.status(400).json({ error: "El campo 'status' debe ser 'pending', 'active' o 'rejected'" });
-            }
-
-            // Validate password if provided
-            if (data.password !== undefined && data.password.trim() === "") {
-                return resp.status(400).json({ error: "La contraseña no puede estar vacía" });
-            }
-
-            const sendStatusEmail = data.status === "active" || data.status === "rejected";
-
-            const user = await usersService.update(req.params.id as string, data);
+            const user = await usersService.update(req.params.id as string, data, currentUser);
             resp.json(user);
 
-            if (sendStatusEmail) {
+            const sendStatusEmail = data.status === "active" || data.status === "rejected";
+            if (sendStatusEmail && targetUser) {
                 const orgName = targetUser.organizationId
                     ? (await organizationsService.findById(targetUser.organizationId))?.name ?? "la organización"
                     : "la organización";
@@ -289,6 +234,15 @@ const UsersController = () => {
                 }
             }
         } catch (error: any) {
+            if (error instanceof ValidationError) {
+                return resp.status(400).json({ error: error.message });
+            }
+            if (error instanceof ForbiddenError) {
+                return resp.status(403).json({ error: error.message });
+            }
+            if (error instanceof NotFoundError) {
+                return resp.status(404).json({ error: error.message });
+            }
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
                 return resp.status(400).json({ error: "El correo institucional ya está registrado" });
