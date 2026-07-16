@@ -50,12 +50,22 @@ class UsersService {
             throw new ValidationError("El campo 'role' debe ser 'admin' o 'trainee'");
         }
 
-        // Forzar el estado de manera segura en el backend
-        data.status = data.role === "admin" ? "active" : "pending";
-
         const passwordHash = await bcrypt.hash(data.password, 10);
-        const { password, ...userData } = data;
-        const user = await prisma.user.create({ data: { ...userData, passwordHash } });
+        const user = await prisma.user.create({
+            data: {
+                firstName: data.firstName,
+                lastName: data.lastName,
+                institutionalEmail: data.institutionalEmail,
+                phoneNumber: data.phoneNumber,
+                career: data.career,
+                cycle: data.cycle,
+                organizationId: data.organizationId,
+                role: data.role,
+                status: data.role === "admin" ? "active" : "pending",
+                deviceToken: data.deviceToken,
+                passwordHash
+            }
+        });
         const secret = process.env.TOKEN || "PROGRAMOVIL";
         return {
             token: jwt.sign({ id: user.id, email: user.institutionalEmail, role: user.role }, secret, { expiresIn: "30d" }),
@@ -99,15 +109,29 @@ class UsersService {
                     if (data.status) delete data.status;
                 }
             } else {
-                if (!currentUser.organizationId || currentUser.organizationId !== targetUser.organizationId) {
-                    throw new ForbiddenError("No tienes permiso para actualizar este usuario");
-                }
-                if (
-                    data.organizationId !== undefined &&
-                    data.organizationId !== null &&
-                    data.organizationId !== currentUser.organizationId
-                ) {
-                    throw new ForbiddenError("No puedes asignar este usuario a otra organización");
+                // El usuario que realiza la actualización es un Administrador
+                if (id !== currentUser.id) {
+                    // El administrador está actualizando a OTRO usuario
+                    const adminDb = await prisma.user.findUnique({ where: { id: currentUser.id } });
+                    if (!adminDb || !adminDb.organizationId || adminDb.organizationId !== targetUser.organizationId) {
+                        throw new ForbiddenError("No tienes permiso para actualizar este usuario");
+                    }
+                    if (
+                        data.organizationId !== undefined &&
+                        data.organizationId !== null &&
+                        data.organizationId !== adminDb.organizationId
+                    ) {
+                        throw new ForbiddenError("No puedes asignar este usuario a otra organización");
+                    }
+                } else {
+                    // El administrador se está actualizando a SÍ MISMO
+                    if (
+                        data.organizationId !== undefined &&
+                        targetUser.organizationId !== null &&
+                        data.organizationId !== targetUser.organizationId
+                    ) {
+                        throw new ForbiddenError("No puedes cambiar de organización una vez asignada");
+                    }
                 }
             }
         }
