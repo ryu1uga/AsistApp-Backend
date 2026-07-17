@@ -107,8 +107,30 @@ const AttendanceRecordsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
-            const data: CreateAttendanceRecordDto = req.body;
+            const currentUser = req.user!;
+
+            if (currentUser.role !== "trainee") {
+                return resp.status(403).json({
+                    error: "Solo los practicantes pueden registrar su asistencia",
+                });
+            }
+
+            const user = await usersService.findById(currentUser.id);
+
+            if (!user?.organizationId) {
+                return resp.status(403).json({
+                    error: "El usuario no pertenece a ninguna organización",
+                });
+            }
+
+            const data: CreateAttendanceRecordDto = {
+                ...req.body,
+                userId: currentUser.id,
+                organizationId: user.organizationId,
+            };
+
             const record = await attendanceRecordsService.create(data);
+
             resp.status(201).json(serializeAttendanceRecord(record));
 
             await activityLogsService.log({
@@ -120,12 +142,13 @@ const AttendanceRecordsController = () => {
             });
         } catch (error) {
             console.error("[AttendanceRecords][POST /]", error);
+
             resp.status(500).json({
                 error: "Error al crear el registro de asistencia",
                 detail: error instanceof Error ? error.message : String(error),
             });
         }
-    })
+    });
 
     /**
      * @openapi

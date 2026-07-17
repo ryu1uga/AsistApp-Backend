@@ -105,8 +105,30 @@ const AttendanceRequestsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
-            const data: CreateAttendanceRequestDto = req.body;
+            const currentUser = req.user!;
+
+            if (currentUser.role !== "trainee") {
+                return resp.status(403).json({
+                    error: "Solo los practicantes pueden crear solicitudes de asistencia",
+                });
+            }
+
+            const user = await usersService.findById(currentUser.id);
+
+            if (!user?.organizationId) {
+                return resp.status(403).json({
+                    error: "El usuario no pertenece a ninguna organización",
+                });
+            }
+
+            const data: CreateAttendanceRequestDto = {
+                ...req.body,
+                userId: currentUser.id,
+                organizationId: user.organizationId,
+            };
+
             const request = await attendanceRequestsService.create(data);
+
             resp.status(201).json(serializeAttendanceRequest(request));
 
             await activityLogsService.log({
@@ -117,9 +139,14 @@ const AttendanceRequestsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            resp.status(500).json({ error: "Error al crear la solicitud de asistencia" });
+            console.error("[AttendanceRequests][POST /]", error);
+
+            resp.status(500).json({
+                error: "Error al crear la solicitud de asistencia",
+                detail: error instanceof Error ? error.message : String(error),
+            });
         }
-    })
+    });
 
     /**
      * @openapi
