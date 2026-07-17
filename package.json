@@ -6,9 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
+    "prestart": "npm run db:seed",
     "start": "node ./dist/index.js",
     "start:dev": "npx nodemon ./src/index.ts",
-    "db:seed": "npx ts-node prisma/seed.ts"
+    "db:seed": "npx ts-node --transpile-only prisma/seed.ts"
   },
   "repository": {
     "type": "git",
@@ -34,8 +35,11 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.1",
     "pg": "^8.21.0",
+    "prisma": "^7.8.0",
     "swagger-jsdoc": "^6.3.0",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -47,9 +51,6 @@
     "@types/pg": "^8.20.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
-    "nodemon": "^3.1.14",
-    "prisma": "^7.8.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "nodemon": "^3.1.14"
   }
 }

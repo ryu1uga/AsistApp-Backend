@@ -30,12 +30,14 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+COPY tsconfig.json ./
 
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
 
 EXPOSE 8080
 
-# Apply pending migrations and start the server
-CMD npx prisma migrate deploy && node dist/index.js
+# Apply pending migrations, seed trainee data, and start the server
+CMD npx prisma migrate deploy && npm run db:seed && node dist/index.js
