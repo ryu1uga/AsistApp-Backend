@@ -22,11 +22,19 @@ class AttendanceRequestsService {
         if (!data.userId || !data.organizationId || !data.requestedDate || !data.reason) {
             throw new ValidationError("userId, organizationId, requestedDate y reason son obligatorios");
         }
-        return prisma.attendanceRequest.create({ data: { ...data, status: RequestStatus.pending } });
+        return prisma.attendanceRequest.create({
+            data: {
+                ...data,
+                requestedDate: new Date(data.requestedDate),
+                status: RequestStatus.pending,
+            },
+        });
     }
 
     update(id: string, data: UpdateAttendanceRequestDto) {
-        return prisma.attendanceRequest.update({ where: { id }, data });
+        const prismaData: any = { ...data };
+        if (data.requestedDate !== undefined) prismaData.requestedDate = new Date(data.requestedDate);
+        return prisma.attendanceRequest.update({ where: { id }, data: prismaData });
     }
 
     remove(id: string) {

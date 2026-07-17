@@ -22,11 +22,27 @@ class AttendanceRecordsService {
         if (!data.userId || !data.organizationId || !data.date || typeof data.autoCheckout !== "boolean") {
             throw new ValidationError("userId, organizationId, date y autoCheckout son obligatorios");
         }
-        return prisma.attendanceRecord.create({ data: { ...data, status: AttendanceStatus.pending } });
+        return prisma.attendanceRecord.create({
+            data: {
+                ...data,
+                date: new Date(data.date),
+                checkIn: data.checkIn ? new Date(data.checkIn) : undefined,
+                lunchStart: data.lunchStart ? new Date(data.lunchStart) : undefined,
+                lunchEnd: data.lunchEnd ? new Date(data.lunchEnd) : undefined,
+                checkOut: data.checkOut ? new Date(data.checkOut) : undefined,
+                status: AttendanceStatus.pending,
+            },
+        });
     }
 
     update(id: string, data: UpdateAttendanceRecordDto) {
-        return prisma.attendanceRecord.update({ where: { id }, data });
+        const prismaData: any = { ...data };
+        if (data.date !== undefined) prismaData.date = new Date(data.date);
+        if (data.checkIn !== undefined) prismaData.checkIn = data.checkIn ? new Date(data.checkIn) : null;
+        if (data.lunchStart !== undefined) prismaData.lunchStart = data.lunchStart ? new Date(data.lunchStart) : null;
+        if (data.lunchEnd !== undefined) prismaData.lunchEnd = data.lunchEnd ? new Date(data.lunchEnd) : null;
+        if (data.checkOut !== undefined) prismaData.checkOut = data.checkOut ? new Date(data.checkOut) : null;
+        return prisma.attendanceRecord.update({ where: { id }, data: prismaData });
     }
 
     remove(id: string) {
