@@ -3,6 +3,7 @@ import { activityLogsService, attendanceRequestsService, usersService } from "..
 import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos";
 import { formatDate } from "../utils/formatters";
 import { LogCategory } from "../generated/prisma/enums";
+import { handleControllerError } from "../utils/validation";
 
 const serializeAttendanceRequest = (req: any) => ({
     ...req,
@@ -44,7 +45,7 @@ const AttendanceRequestsController = () => {
             const requests = await attendanceRequestsService.findAll({ organizationId: admin.organizationId });
             resp.json(requests.map(serializeAttendanceRequest));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener las solicitudes de asistencia" });
+            handleControllerError(resp, error, { fallback: "Error al obtener las solicitudes de asistencia", context: "AttendanceRequests][GET /" });
         }
     })
 
@@ -79,7 +80,7 @@ const AttendanceRequestsController = () => {
             }
             resp.json(serializeAttendanceRequest(request));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener la solicitud de asistencia" });
+            handleControllerError(resp, error, { fallback: "Error al obtener la solicitud de asistencia", context: "AttendanceRequests][GET /:id" });
         }
     })
 
@@ -139,12 +140,7 @@ const AttendanceRequestsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            console.error("[AttendanceRequests][POST /]", error);
-
-            resp.status(500).json({
-                error: "Error al crear la solicitud de asistencia",
-                detail: error instanceof Error ? error.message : String(error),
-            });
+            handleControllerError(resp, error, { fallback: "Error al crear la solicitud de asistencia", context: "AttendanceRequests][POST /" });
         }
     });
 
@@ -189,7 +185,11 @@ const AttendanceRequestsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            resp.status(500).json({ error: "Error al actualizar la solicitud de asistencia" });
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar la solicitud de asistencia",
+                notFound: "Solicitud de asistencia no encontrada",
+                context: "AttendanceRequests][PUT /:id",
+            });
         }
     })
 
@@ -228,7 +228,11 @@ const AttendanceRequestsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            resp.status(500).json({ error: "Error al eliminar la solicitud de asistencia" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar la solicitud de asistencia",
+                notFound: "Solicitud de asistencia no encontrada",
+                context: "AttendanceRequests][DELETE /:id",
+            });
         }
     })
 

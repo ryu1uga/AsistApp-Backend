@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import { activityLogsService, usersService, organizationsService } from "../services";
 import { authenticate } from "../middlewares/authenticate";
-import { isValidEmail, isValidRole, isValidStatus, ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
+import { handleControllerError } from "../utils/validation";
 import emailService from "../services/EmailService";
 import { LogCategory } from "../generated/prisma/enums";
 
@@ -33,7 +33,7 @@ const UsersController = () => {
             }
             resp.json(await usersService.findAll({ organizationId: currentUser.organizationId }));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener los usuarios" });
+            handleControllerError(resp, error, { fallback: "Error al obtener los usuarios", context: "Users][GET /" });
         }
     })
 
@@ -80,7 +80,7 @@ const UsersController = () => {
 
             resp.json(user);
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener el usuario" });
+            handleControllerError(resp, error, { fallback: "Error al obtener el usuario", context: "Users][GET /:id" });
         }
     })
 
@@ -121,15 +121,11 @@ const UsersController = () => {
                 });
             }
         } catch (error: any) {
-            if (error instanceof ValidationError) {
-                return resp.status(400).json({ error: error.message });
-            }
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
                 return resp.status(400).json({ error: "El correo institucional ya está registrado" });
             }
-            console.error("Error al registrar el usuario:", error);
-            resp.status(500).json({ error: "Error al registrar el usuario" });
+            handleControllerError(resp, error, { fallback: "Error al registrar el usuario", context: "Users][POST /register" });
         }
     })
 
@@ -186,8 +182,7 @@ const UsersController = () => {
             }
             resp.json(session);
         } catch (error) {
-            console.error("Error al iniciar sesión:", error);
-            resp.status(500).json({ error: "Error al iniciar sesión" });
+            handleControllerError(resp, error, { fallback: "Error al iniciar sesión", context: "Users][POST /login" });
         }
     })
 
@@ -229,7 +224,7 @@ const UsersController = () => {
 
             const targetUser = await usersService.findById(req.params.id as string);
 
-            const user = await usersService.update(req.params.id as string, data, currentUser);
+            const user = await usersService.update(req.params.id as string, data, currentUser, targetUser);
             resp.json(user);
 
             if (user.organizationId) {
@@ -255,25 +250,15 @@ const UsersController = () => {
                 }
             }
         } catch (error: any) {
-            if (error instanceof ValidationError) {
-                return resp.status(400).json({ error: error.message });
-            }
-            if (error instanceof ForbiddenError) {
-                return resp.status(403).json({ error: error.message });
-            }
-            if (error instanceof NotFoundError) {
-                return resp.status(404).json({ error: error.message });
-            }
             // Handle Prisma unique constraint violation (duplicate email)
             if (error.code === "P2002" && error.meta?.target?.includes("institutional_email")) {
                 return resp.status(400).json({ error: "El correo institucional ya está registrado" });
             }
-            // Handle Prisma record not found error
-            if (error.code === "P2025" || error.message?.includes("Record to update not found")) {
-                return resp.status(404).json({ error: "Usuario no encontrado" });
-            }
-            console.error("Error al actualizar el usuario:", error);
-            resp.status(500).json({ error: "Error al actualizar el usuario" });
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar el usuario",
+                notFound: "Usuario no encontrado",
+                context: "Users][PUT /:id",
+            });
         }
     })
 
@@ -325,7 +310,11 @@ const UsersController = () => {
                 });
             }
         } catch (error) {
-            resp.status(500).json({ error: "Error al eliminar el usuario" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar el usuario",
+                notFound: "Usuario no encontrado",
+                context: "Users][DELETE /:id",
+            });
         }
     })
 

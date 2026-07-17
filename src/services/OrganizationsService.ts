@@ -23,6 +23,14 @@ class OrganizationsService {
     }
 
     async create(data: CreateOrganizationDto) {
+        if (!data.name || data.name.trim() === "") {
+            throw new ValidationError("El nombre de la organización no puede estar vacío");
+        }
+        if (typeof data.lateTimeLimit !== "number" || data.lateTimeLimit < 0) {
+            throw new ValidationError("El límite de tiempo de tardanza debe ser un número entero mayor o igual a 0");
+        }
+        data.name = data.name.trim();
+
         let code: string = "";
         for (let attempts = 0; attempts < 5; attempts++) {
             code = this.generateCode(data.name);

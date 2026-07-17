@@ -1,9 +1,12 @@
 import express, { Request, Response } from "express";
 import { activityLogsService, organizationsService, usersService } from "../services";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "../dtos";
-import { authenticate } from "../middlewares/authenticate";
-import { ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
+import { handleControllerError } from "../utils/validation";
 import { LogCategory } from "../generated/prisma/enums";
+
+// Nota: este router ya se monta con `authenticate` en index.ts
+// (app.use("/organizations", authenticate, OrganizationsController())),
+// por lo que las rutas de acá abajo no necesitan volver a declararlo.
 
 const OrganizationsController = () => {
     const router = express.Router();
@@ -24,7 +27,7 @@ const OrganizationsController = () => {
      *               items:
      *                 $ref: '#/components/schemas/Organization'
      */
-    router.get("/", authenticate, async (req: Request, resp: Response) => {
+    router.get("/", async (req: Request, resp: Response) => {
         try {
             const { code } = req.query;
             if (code) {
@@ -42,7 +45,7 @@ const OrganizationsController = () => {
             const organization = await organizationsService.findById(currentUser.organizationId);
             resp.json(organization ? [organization] : []);
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener las organizaciones" });
+            handleControllerError(resp, error, { fallback: "Error al obtener las organizaciones", context: "Organizations][GET /" });
         }
     })
 
@@ -69,7 +72,7 @@ const OrganizationsController = () => {
      *       404:
      *         description: Organización no encontrada
      */
-    router.get("/:id", authenticate, async (req: Request, resp: Response) => {
+    router.get("/:id", async (req: Request, resp: Response) => {
         try {
             const currentUser = await usersService.findById(req.user!.id);
             if (!currentUser?.organizationId || currentUser.organizationId !== req.params.id) {
@@ -82,7 +85,7 @@ const OrganizationsController = () => {
             }
             resp.json(organization);
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener la organización" });
+            handleControllerError(resp, error, { fallback: "Error al obtener la organización", context: "Organizations][GET /:id" });
         }
     })
 
@@ -106,7 +109,7 @@ const OrganizationsController = () => {
      *             schema:
      *               $ref: '#/components/schemas/Organization'
      */
-    router.post("/", authenticate, async (req: Request, resp: Response) => {
+    router.post("/", async (req: Request, resp: Response) => {
         try {
             const currentUser = req.user;
             if (!currentUser) {
@@ -129,8 +132,11 @@ const OrganizationsController = () => {
                 title: "Organización creada",
                 category: LogCategory.members,
             });
-        } catch (error) {
-            resp.status(500).json({ error: "Error al crear la organización" });
+        } catch (error: any) {
+            if (error.code === "P2002" && error.meta?.target?.includes("code")) {
+                return resp.status(400).json({ error: "El código de la organización ya está registrado" });
+            }
+            handleControllerError(resp, error, { fallback: "Error al crear la organización", context: "Organizations][POST /" });
         }
     })
 
@@ -161,7 +167,7 @@ const OrganizationsController = () => {
      *             schema:
      *               $ref: '#/components/schemas/Organization'
      */
-    router.put("/:id", authenticate, async (req: Request, resp: Response) => {
+    router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateOrganizationDto = req.body;
             const currentUser = req.user;
@@ -181,25 +187,15 @@ const OrganizationsController = () => {
                 category: LogCategory.members,
             });
         } catch (error: any) {
-            if (error instanceof ValidationError) {
-                return resp.status(400).json({ error: error.message });
-            }
-            if (error instanceof ForbiddenError) {
-                return resp.status(403).json({ error: error.message });
-            }
-            if (error instanceof NotFoundError) {
-                return resp.status(404).json({ error: error.message });
-            }
             // Handle Prisma unique constraint violation (duplicate code)
             if (error.code === "P2002" && error.meta?.target?.includes("code")) {
                 return resp.status(400).json({ error: "El código de la organización ya está registrado" });
             }
-            // Handle Prisma record not found
-            if (error.code === "P2025" || error.message?.includes("Record to update not found")) {
-                return resp.status(404).json({ error: "Organización no encontrada" });
-            }
-            console.error("Error al actualizar la organización:", error);
-            resp.status(500).json({ error: "Error al actualizar la organización" });
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar la organización",
+                notFound: "Organización no encontrada",
+                context: "Organizations][PUT /:id",
+            });
         }
     })
 
@@ -220,7 +216,7 @@ const OrganizationsController = () => {
      *       204:
      *         description: Organización eliminada
      */
-    router.delete("/:id", authenticate, async (req: Request, resp: Response) => {
+    router.delete("/:id", async (req: Request, resp: Response) => {
         try {
             const currentUser = req.user!;
             if (currentUser.role !== "admin") {
@@ -248,7 +244,11 @@ const OrganizationsController = () => {
                 category: LogCategory.members,
             });
         } catch (error) {
-            resp.status(500).json({ error: "Error al eliminar la organización" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar la organización",
+                notFound: "Organización no encontrada",
+                context: "Organizations][DELETE /:id",
+            });
         }
     })
 

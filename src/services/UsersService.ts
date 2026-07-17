@@ -4,6 +4,7 @@ import prisma from "../config/db";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
 import type { User } from "../generated/prisma/client";
 import { isValidEmail, isValidRole, isValidStatus, ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
+import { JWT_SECRET } from "../config/auth";
 
 type PublicUser = Omit<User, "passwordHash">;
 
@@ -13,11 +14,10 @@ const withoutPassword = (user: User): PublicUser => {
 };
 
 class UsersService {
-    async findAll(filters?: { organizationId?: string; status?: string }) {
+    async findAll(filters?: { organizationId?: string }) {
         const users = await prisma.user.findMany({
             where: {
                 ...(filters?.organizationId && { organizationId: filters.organizationId }),
-                ...(filters?.status && { status: filters.status as any }),
             },
         });
         return users.map(withoutPassword);
@@ -66,9 +66,8 @@ class UsersService {
                 passwordHash
             }
         });
-        const secret = process.env.TOKEN || "PROGRAMOVIL";
         return {
-            token: jwt.sign({ id: user.id, email: user.institutionalEmail, role: user.role }, secret, { expiresIn: "30d" }),
+            token: jwt.sign({ id: user.id, email: user.institutionalEmail, role: user.role }, JWT_SECRET, { expiresIn: "30d" }),
             user: withoutPassword(user),
         };
     }
@@ -77,15 +76,24 @@ class UsersService {
         const user = await prisma.user.findUnique({ where: { institutionalEmail: email } });
         if (!user) return null;
         if (!await bcrypt.compare(password, user.passwordHash)) return false;
-        const secret = process.env.TOKEN || "PROGRAMOVIL";
         return {
-            token: jwt.sign({ id: user.id, email: user.institutionalEmail, role: user.role }, secret, { expiresIn: "30d" }),
+            token: jwt.sign({ id: user.id, email: user.institutionalEmail, role: user.role }, JWT_SECRET, { expiresIn: "30d" }),
             user: withoutPassword(user)
         };
     }
 
-    async update(id: string, data: UpdateUserDto, currentUser?: { id: string; role: string; organizationId?: string | null }) {
-        const targetUser = await prisma.user.findUnique({ where: { id } });
+    /**
+     * @param preloadedTarget Usuario objetivo ya obtenido previamente por el
+     * controller (p. ej. para armar el email de notificación). Si se pasa,
+     * se evita un segundo `findUnique` redundante contra la misma fila.
+     */
+    async update(
+        id: string,
+        data: UpdateUserDto,
+        currentUser?: { id: string; role: string; organizationId?: string | null },
+        preloadedTarget?: { organizationId: string | null } | null
+    ) {
+        const targetUser = preloadedTarget !== undefined ? preloadedTarget : await prisma.user.findUnique({ where: { id } });
         if (!targetUser) {
             throw new NotFoundError("Usuario no encontrado");
         }
@@ -171,7 +179,7 @@ class UsersService {
         });
         return withoutPassword(user);
     }
-    
+
     remove(id: string) {
         return prisma.user.delete({ where: { id } });
     }

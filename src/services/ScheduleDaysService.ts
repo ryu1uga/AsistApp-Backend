@@ -1,10 +1,16 @@
 import prisma from "../config/db";
 import { CreateScheduleDayDto, UpdateScheduleDayDto } from "../dtos";
 import { parseTime } from "../utils/formatters";
+import { ValidationError } from "../utils/validation";
 
 class ScheduleDaysService {
-    findAll() {
-        return prisma.scheduleDay.findMany();
+    findAll(filters?: { organizationId?: string; userId?: string }) {
+        return prisma.scheduleDay.findMany({
+            where: {
+                ...(filters?.organizationId && { schedule: { organizationId: filters.organizationId } }),
+                ...(filters?.userId && { schedule: { userId: filters.userId } }),
+            },
+        });
     }
 
     findByScheduleId(scheduleId: string) {
@@ -16,6 +22,9 @@ class ScheduleDaysService {
     }
 
     create(data: CreateScheduleDayDto) {
+        if (!data.scheduleId || !data.day || !data.checkInTime || !data.checkOutTime) {
+            throw new ValidationError("scheduleId, day, checkInTime y checkOutTime son obligatorios");
+        }
         return prisma.scheduleDay.create({
             data: {
                 ...data,

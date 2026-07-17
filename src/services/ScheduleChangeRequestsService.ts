@@ -2,6 +2,7 @@ import prisma from "../config/db";
 import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "../dtos";
 import { RequestStatus } from "../generated/prisma/enums";
 import { parseTime } from "../utils/formatters";
+import { ValidationError } from "../utils/validation";
 
 class ScheduleChangeRequestsService {
     findAll(filters?: { userId?: string; organizationId?: string }) {
@@ -25,6 +26,9 @@ class ScheduleChangeRequestsService {
     }
 
     create(data: CreateScheduleChangeRequestDto) {
+        if (!data.userId || !data.scheduleDayId || !data.reason) {
+            throw new ValidationError("userId, scheduleDayId y reason son obligatorios");
+        }
         return prisma.scheduleChangeRequest.create({
             data: {
                 ...data,
@@ -53,10 +57,10 @@ class ScheduleChangeRequestsService {
             await tx.scheduleDay.update({
                 where: { id: existing.scheduleDayId },
                 data: {
-                    ...(existing.newCheckInTime && { checkInTime: existing.newCheckInTime }),
-                    ...(existing.newLunchStartTime !== null && { lunchStartTime: existing.newLunchStartTime }),
-                    ...(existing.newLunchEndTime !== null && { lunchEndTime: existing.newLunchEndTime }),
-                    ...(existing.newCheckOutTime && { checkOutTime: existing.newCheckOutTime }),
+                    ...(existing.newCheckInTime != null && { checkInTime: existing.newCheckInTime }),
+                    ...(existing.newLunchStartTime != null && { lunchStartTime: existing.newLunchStartTime }),
+                    ...(existing.newLunchEndTime != null && { lunchEndTime: existing.newLunchEndTime }),
+                    ...(existing.newCheckOutTime != null && { checkOutTime: existing.newCheckOutTime }),
                 },
             });
 

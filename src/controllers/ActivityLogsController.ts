@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { activityLogsService, usersService } from "../services";
 import { CreateActivityLogDto, UpdateActivityLogDto } from "../dtos";
+import { handleControllerError } from "../utils/validation";
 
 const ActivityLogsController = () => {
     const router = express.Router();
@@ -30,7 +31,7 @@ const ActivityLogsController = () => {
             const logs = await activityLogsService.findAll({ organizationId: currentUser.organizationId });
             resp.json(logs);
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener los registros de actividad" });
+            handleControllerError(resp, error, { fallback: "Error al obtener los registros de actividad", context: "ActivityLogs][GET /" });
         }
     })
 
@@ -59,13 +60,17 @@ const ActivityLogsController = () => {
      */
     router.get("/:id", async (req: Request, resp: Response) => {
         try {
+            const currentUser = await usersService.findById(req.user!.id);
             const log = await activityLogsService.findById(req.params.id as string);
             if (!log) {
                 return resp.status(404).json({ error: "Registro de actividad no encontrado" });
             }
+            if (!currentUser?.organizationId || currentUser.organizationId !== log.organizationId) {
+                return resp.status(403).json({ error: "No tienes permiso para ver este registro de actividad" });
+            }
             resp.json(log);
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener el registro de actividad" });
+            handleControllerError(resp, error, { fallback: "Error al obtener el registro de actividad", context: "ActivityLogs][GET /:id" });
         }
     })
 
@@ -91,11 +96,20 @@ const ActivityLogsController = () => {
      */
     router.post("/", async (req: Request, resp: Response) => {
         try {
-            const data: CreateActivityLogDto = req.body;
+            const currentUser = req.user!;
+            if (currentUser.role !== "admin") {
+                return resp.status(403).json({ error: "No tienes permiso para crear registros de actividad" });
+            }
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId) {
+                return resp.status(403).json({ error: "El usuario no pertenece a ninguna organización" });
+            }
+
+            const data: CreateActivityLogDto = { ...req.body, organizationId: admin.organizationId };
             const log = await activityLogsService.create(data);
             resp.status(201).json(log);
         } catch (error) {
-            resp.status(500).json({ error: "Error al crear el registro de actividad" });
+            handleControllerError(resp, error, { fallback: "Error al crear el registro de actividad", context: "ActivityLogs][POST /" });
         }
     })
 
@@ -128,11 +142,29 @@ const ActivityLogsController = () => {
      */
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
+            if (currentUser.role !== "admin") {
+                return resp.status(403).json({ error: "No tienes permiso para actualizar registros de actividad" });
+            }
+
+            const existing = await activityLogsService.findById(req.params.id as string);
+            if (!existing) {
+                return resp.status(404).json({ error: "Registro de actividad no encontrado" });
+            }
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId || admin.organizationId !== existing.organizationId) {
+                return resp.status(403).json({ error: "No tienes permiso para actualizar este registro de actividad" });
+            }
+
             const data: UpdateActivityLogDto = req.body;
             const log = await activityLogsService.update(req.params.id as string, data);
             resp.json(log);
         } catch (error) {
-            resp.status(500).json({ error: "Error al actualizar el registro de actividad" });
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar el registro de actividad",
+                notFound: "Registro de actividad no encontrado",
+                context: "ActivityLogs][PUT /:id",
+            });
         }
     })
 
@@ -155,10 +187,28 @@ const ActivityLogsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
+            const currentUser = req.user!;
+            if (currentUser.role !== "admin") {
+                return resp.status(403).json({ error: "No tienes permiso para eliminar registros de actividad" });
+            }
+
+            const existing = await activityLogsService.findById(req.params.id as string);
+            if (!existing) {
+                return resp.status(404).json({ error: "Registro de actividad no encontrado" });
+            }
+            const admin = await usersService.findById(currentUser.id);
+            if (!admin?.organizationId || admin.organizationId !== existing.organizationId) {
+                return resp.status(403).json({ error: "No tienes permiso para eliminar este registro de actividad" });
+            }
+
             await activityLogsService.remove(req.params.id as string);
             resp.status(204).send();
         } catch (error) {
-            resp.status(500).json({ error: "Error al eliminar el registro de actividad" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar el registro de actividad",
+                notFound: "Registro de actividad no encontrado",
+                context: "ActivityLogs][DELETE /:id",
+            });
         }
     })
 

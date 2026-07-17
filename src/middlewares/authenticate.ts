@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { UserRole } from "../generated/prisma/enums";
+import { JWT_SECRET } from "../config/auth";
 
 export interface AuthenticatedUser {
     id: string;
@@ -29,7 +30,7 @@ export const authenticate = (
     }
 
     try {
-        const payload = jwt.verify(token, process.env.TOKEN || "PROGRAMOVIL");
+        const payload = jwt.verify(token, JWT_SECRET);
 
         if (
             typeof payload === "string" ||

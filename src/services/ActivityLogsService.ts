@@ -1,5 +1,6 @@
 import prisma from "../config/db";
 import { CreateActivityLogDto, UpdateActivityLogDto } from "../dtos";
+import { ValidationError } from "../utils/validation";
 
 class ActivityLogsService {
     findAll(filters?: { organizationId?: string }) {
@@ -16,6 +17,9 @@ class ActivityLogsService {
     }
 
     create(data: CreateActivityLogDto) {
+        if (!data.organizationId || !data.performedById || !data.affectedUserId || !data.title || !data.category) {
+            throw new ValidationError("organizationId, performedById, affectedUserId, title y category son obligatorios");
+        }
         return prisma.activityLog.create({ data });
     }
 

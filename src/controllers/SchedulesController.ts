@@ -4,6 +4,7 @@ import { CreateScheduleDto, UpdateScheduleDto } from "../dtos";
 import { formatTime } from "../utils/formatters";
 import emailService from "../services/EmailService";
 import { LogCategory } from "../generated/prisma/enums";
+import { handleControllerError } from "../utils/validation";
 
 const serializeSchedule = (schedule: any) => ({
     ...schedule,
@@ -51,7 +52,7 @@ const SchedulesController = () => {
             const schedules = await schedulesService.findAll({ organizationId: admin.organizationId });
             resp.json(schedules.map(serializeSchedule));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener los horarios" });
+            handleControllerError(resp, error, { fallback: "Error al obtener los horarios", context: "Schedules][GET /" });
         }
     })
 
@@ -86,7 +87,7 @@ const SchedulesController = () => {
             }
             resp.json(serializeSchedule(schedule));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener el horario" });
+            handleControllerError(resp, error, { fallback: "Error al obtener el horario", context: "Schedules][GET /:id" });
         }
     })
 
@@ -136,7 +137,7 @@ const SchedulesController = () => {
                 category: LogCategory.schedule,
             });
         } catch (error) {
-            resp.status(500).json({ error: "Error al crear el horario" });
+            handleControllerError(resp, error, { fallback: "Error al crear el horario", context: "Schedules][POST /" });
         }
     })
 
@@ -211,7 +212,11 @@ const SchedulesController = () => {
                 }
             }
         } catch (error) {
-            resp.status(500).json({ error: "Error al actualizar el horario" });
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar el horario",
+                notFound: "Horario no encontrado",
+                context: "Schedules][PUT /:id",
+            });
         }
     })
 
@@ -250,7 +255,11 @@ const SchedulesController = () => {
                 category: LogCategory.schedule,
             });
         } catch (error) {
-            resp.status(500).json({ error: "Error al eliminar el horario" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar el horario",
+                notFound: "Horario no encontrado",
+                context: "Schedules][DELETE /:id",
+            });
         }
     })
 

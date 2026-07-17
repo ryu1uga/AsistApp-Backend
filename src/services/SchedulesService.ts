@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { CreateScheduleDto, UpdateScheduleDto } from "../dtos";
 import { parseTime } from "../utils/formatters";
+import { ValidationError } from "../utils/validation";
 
 class SchedulesService {
     findAll(filters?: { userId?: string; organizationId?: string }) {
@@ -19,6 +20,9 @@ class SchedulesService {
     }
 
     create(data: CreateScheduleDto) {
+        if (!data.userId || !data.organizationId || !data.status || typeof data.weeklyHours !== "number") {
+            throw new ValidationError("userId, organizationId, weeklyHours y status son obligatorios");
+        }
         const { days, ...scheduleData } = data;
         return prisma.schedule.create({
             data: {

@@ -3,6 +3,7 @@ import { activityLogsService, attendanceRecordsService, usersService } from "../
 import { CreateAttendanceRecordDto, UpdateAttendanceRecordDto } from "../dtos";
 import { formatDate } from "../utils/formatters";
 import { LogCategory } from "../generated/prisma/enums";
+import { handleControllerError } from "../utils/validation";
 
 const serializeAttendanceRecord = (record: any) => ({
     ...record,
@@ -44,8 +45,7 @@ const AttendanceRecordsController = () => {
             const records = await attendanceRecordsService.findAll({ organizationId: admin.organizationId });
             resp.json(records.map(serializeAttendanceRecord));
         } catch (error) {
-            console.error("[AttendanceRecords][GET /]", error);
-            resp.status(500).json({ error: "Error al obtener los registros de asistencia" });
+            handleControllerError(resp, error, { fallback: "Error al obtener los registros de asistencia", context: "AttendanceRecords][GET /" });
         }
     })
 
@@ -80,8 +80,7 @@ const AttendanceRecordsController = () => {
             }
             resp.json(serializeAttendanceRecord(record));
         } catch (error) {
-            console.error("[AttendanceRecords][GET /:id]", error);
-            resp.status(500).json({ error: "Error al obtener el registro de asistencia" });
+            handleControllerError(resp, error, { fallback: "Error al obtener el registro de asistencia", context: "AttendanceRecords][GET /:id" });
         }
     })
 
@@ -141,12 +140,7 @@ const AttendanceRecordsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            console.error("[AttendanceRecords][POST /]", error);
-
-            resp.status(500).json({
-                error: "Error al crear el registro de asistencia",
-                detail: error instanceof Error ? error.message : String(error),
-            });
+            handleControllerError(resp, error, { fallback: "Error al crear el registro de asistencia", context: "AttendanceRecords][POST /" });
         }
     });
 
@@ -191,10 +185,10 @@ const AttendanceRecordsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            console.error("[AttendanceRecords][PUT /:id]", error);
-            resp.status(500).json({
-                error: "Error al actualizar el registro de asistencia",
-                detail: error instanceof Error ? error.message : String(error),
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar el registro de asistencia",
+                notFound: "Registro de asistencia no encontrado",
+                context: "AttendanceRecords][PUT /:id",
             });
         }
     })
@@ -234,8 +228,11 @@ const AttendanceRecordsController = () => {
                 category: LogCategory.attendance,
             });
         } catch (error) {
-            console.error("[AttendanceRecords][DELETE /:id]", error);
-            resp.status(500).json({ error: "Error al eliminar el registro de asistencia" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar el registro de asistencia",
+                notFound: "Registro de asistencia no encontrado",
+                context: "AttendanceRecords][DELETE /:id",
+            });
         }
     })
 

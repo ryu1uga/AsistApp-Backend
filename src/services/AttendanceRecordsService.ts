@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { CreateAttendanceRecordDto, UpdateAttendanceRecordDto } from "../dtos";
 import { AttendanceStatus } from "../generated/prisma/enums";
+import { ValidationError } from "../utils/validation";
 
 class AttendanceRecordsService {
     findAll(filters?: { userId?: string; organizationId?: string }) {
@@ -18,6 +19,9 @@ class AttendanceRecordsService {
     }
 
     create(data: CreateAttendanceRecordDto) {
+        if (!data.userId || !data.organizationId || !data.date || typeof data.autoCheckout !== "boolean") {
+            throw new ValidationError("userId, organizationId, date y autoCheckout son obligatorios");
+        }
         return prisma.attendanceRecord.create({ data: { ...data, status: AttendanceStatus.pending } });
     }
 

@@ -164,20 +164,19 @@ const swaggerSpec = swaggerJsdoc({
                 },
                 CreateOrganizationDto: {
                     type: "object",
-                    required: ["name", "code", "lateTimeLimit"],
+                    required: ["name", "lateTimeLimit"],
                     properties: {
                         name: { type: "string" },
-                        code: { type: "string" },
                         photoUrl: { type: "string", nullable: true },
                         description: { type: "string", nullable: true },
                         lateTimeLimit: { type: "integer" },
                     },
+                    description: "El campo 'code' no se envía: se genera automáticamente en el servidor.",
                 },
                 UpdateOrganizationDto: {
                     type: "object",
                     properties: {
                         name: { type: "string" },
-                        code: { type: "string" },
                         photoUrl: { type: "string", nullable: true },
                         description: { type: "string", nullable: true },
                         lateTimeLimit: { type: "integer" },
@@ -185,7 +184,7 @@ const swaggerSpec = swaggerJsdoc({
                 },
                 CreateUserDto: {
                     type: "object",
-                    required: ["firstName", "lastName", "institutionalEmail", "phoneNumber", "role", "status", "password"],
+                    required: ["firstName", "lastName", "institutionalEmail", "phoneNumber", "role", "password"],
                     properties: {
                         firstName: { type: "string" },
                         lastName: { type: "string" },
@@ -199,6 +198,7 @@ const swaggerSpec = swaggerJsdoc({
                         deviceToken: { type: "string", nullable: true },
                         password: { type: "string" },
                     },
+                    description: "El campo 'status' no se toma del body: se calcula automáticamente ('active' para admin, 'pending' para trainee).",
                 },
                 UpdateUserDto: {
                     type: "object",

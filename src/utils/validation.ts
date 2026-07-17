@@ -1,3 +1,4 @@
+import type { Response } from "express";
 import { UserRole, UserStatus } from "../generated/prisma/enums";
 
 /**
@@ -51,4 +52,36 @@ export const isValidRole = (role: any): role is UserRole => {
  */
 export const isValidStatus = (status: any): status is UserStatus => {
     return status === UserStatus.pending || status === UserStatus.active || status === UserStatus.rejected;
+};
+
+/**
+ * Manejo de errores centralizado para controllers. Traduce los errores de
+ * negocio (ValidationError/ForbiddenError/NotFoundError) y los errores
+ * conocidos de Prisma (P2025 = registro no encontrado) al status HTTP y
+ * forma de respuesta correctos, y deja todo lo demás como 500 genérico con
+ * log en consola. Se usa en todos los controllers para que el manejo de
+ * errores sea uniforme en toda la API.
+ */
+export const handleControllerError = (
+    resp: Response,
+    error: any,
+    options: { fallback: string; notFound?: string; context?: string }
+) => {
+    if (error instanceof ValidationError) {
+        return resp.status(400).json({ error: error.message });
+    }
+    if (error instanceof ForbiddenError) {
+        return resp.status(403).json({ error: error.message });
+    }
+    if (error instanceof NotFoundError) {
+        return resp.status(404).json({ error: error.message });
+    }
+    if (
+        options.notFound &&
+        (error?.code === "P2025" || error?.message?.includes?.("Record to update not found") || error?.message?.includes?.("Record to delete does not exist"))
+    ) {
+        return resp.status(404).json({ error: options.notFound });
+    }
+    console.error(`[${options.context ?? "Controller"}]`, error);
+    return resp.status(500).json({ error: options.fallback });
 };

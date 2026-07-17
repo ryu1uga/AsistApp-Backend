@@ -4,6 +4,7 @@ import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "
 import { formatTime } from "../utils/formatters";
 import emailService from "../services/EmailService";
 import { LogCategory } from "../generated/prisma/enums";
+import { handleControllerError } from "../utils/validation";
 
 const serializeScheduleChangeRequest = (req: any) => ({
     ...req,
@@ -55,7 +56,7 @@ const ScheduleChangeRequestsController = () => {
             const requests = await scheduleChangeRequestsService.findAll({ organizationId: admin.organizationId });
             resp.json(requests.map(serializeScheduleChangeRequest));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener las solicitudes de cambio de horario" });
+            handleControllerError(resp, error, { fallback: "Error al obtener las solicitudes de cambio de horario", context: "ScheduleChangeRequests][GET /" });
         }
     })
 
@@ -90,7 +91,7 @@ const ScheduleChangeRequestsController = () => {
             }
             resp.json(serializeScheduleChangeRequest(request));
         } catch (error) {
-            resp.status(500).json({ error: "Error al obtener la solicitud de cambio de horario" });
+            handleControllerError(resp, error, { fallback: "Error al obtener la solicitud de cambio de horario", context: "ScheduleChangeRequests][GET /:id" });
         }
     })
 
@@ -142,7 +143,7 @@ const ScheduleChangeRequestsController = () => {
                 });
             }
         } catch (error) {
-            resp.status(500).json({ error: "Error al crear la solicitud de cambio de horario" });
+            handleControllerError(resp, error, { fallback: "Error al crear la solicitud de cambio de horario", context: "ScheduleChangeRequests][POST /" });
         }
     })
 
@@ -215,7 +216,11 @@ const ScheduleChangeRequestsController = () => {
                 }
             }
         } catch (error) {
-            resp.status(500).json({ error: "Error al actualizar la solicitud de cambio de horario" });
+            handleControllerError(resp, error, {
+                fallback: "Error al actualizar la solicitud de cambio de horario",
+                notFound: "Solicitud de cambio de horario no encontrada",
+                context: "ScheduleChangeRequests][PUT /:id",
+            });
         }
     })
 
@@ -258,7 +263,11 @@ const ScheduleChangeRequestsController = () => {
                 });
             }
         } catch (error) {
-            resp.status(500).json({ error: "Error al eliminar la solicitud de cambio de horario" });
+            handleControllerError(resp, error, {
+                fallback: "Error al eliminar la solicitud de cambio de horario",
+                notFound: "Solicitud de cambio de horario no encontrada",
+                context: "ScheduleChangeRequests][DELETE /:id",
+            });
         }
     })
 
