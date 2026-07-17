@@ -1,9 +1,10 @@
 import express, { Request, Response } from "express";
 import { CreateUserDto, UpdateUserDto } from "../dtos";
-import { usersService, organizationsService } from "../services";
+import { activityLogsService, usersService, organizationsService } from "../services";
 import { authenticate } from "../middlewares/authenticate";
 import { isValidEmail, isValidRole, isValidStatus, ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
 import emailService from "../services/EmailService";
+import { LogCategory } from "../generated/prisma/enums";
 
 const UsersController = () => {
     const router = express.Router();
@@ -109,6 +110,16 @@ const UsersController = () => {
             const data: CreateUserDto = req.body;
             const session = await usersService.register(data);
             resp.status(201).json(session);
+
+            if (session.user.organizationId) {
+                await activityLogsService.log({
+                    organizationId: session.user.organizationId,
+                    performedById: session.user.id,
+                    affectedUserId: session.user.id,
+                    title: "Usuario registrado",
+                    category: LogCategory.members,
+                });
+            }
         } catch (error: any) {
             if (error instanceof ValidationError) {
                 return resp.status(400).json({ error: error.message });
@@ -221,6 +232,16 @@ const UsersController = () => {
             const user = await usersService.update(req.params.id as string, data, currentUser);
             resp.json(user);
 
+            if (user.organizationId) {
+                await activityLogsService.log({
+                    organizationId: user.organizationId,
+                    performedById: currentUser.id,
+                    affectedUserId: user.id,
+                    title: "Usuario actualizado",
+                    category: LogCategory.members,
+                });
+            }
+
             const sendStatusEmail = data.status === "active" || data.status === "rejected";
             if (sendStatusEmail && targetUser) {
                 const orgName = targetUser.organizationId
@@ -293,6 +314,16 @@ const UsersController = () => {
 
             await usersService.remove(req.params.id as string);
             resp.status(204).send();
+
+            if (targetUser.organizationId) {
+                await activityLogsService.log({
+                    organizationId: targetUser.organizationId,
+                    performedById: currentUser.id,
+                    affectedUserId: targetUser.id,
+                    title: "Usuario eliminado",
+                    category: LogCategory.members,
+                });
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el usuario" });
         }

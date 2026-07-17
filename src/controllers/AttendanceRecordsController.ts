@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
-import { attendanceRecordsService, usersService } from "../services";
+import { activityLogsService, attendanceRecordsService, usersService } from "../services";
 import { CreateAttendanceRecordDto, UpdateAttendanceRecordDto } from "../dtos";
 import { formatDate } from "../utils/formatters";
+import { LogCategory } from "../generated/prisma/enums";
 
 const serializeAttendanceRecord = (record: any) => ({
     ...record,
@@ -109,6 +110,14 @@ const AttendanceRecordsController = () => {
             const data: CreateAttendanceRecordDto = req.body;
             const record = await attendanceRecordsService.create(data);
             resp.status(201).json(serializeAttendanceRecord(record));
+
+            await activityLogsService.log({
+                organizationId: data.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: data.userId,
+                title: "Registro de asistencia creado",
+                category: LogCategory.attendance,
+            });
         } catch (error) {
             console.error("[AttendanceRecords][POST /]", error);
             resp.status(500).json({
@@ -150,6 +159,14 @@ const AttendanceRecordsController = () => {
             const data: UpdateAttendanceRecordDto = req.body;
             const record = await attendanceRecordsService.update(req.params.id as string, data);
             resp.json(serializeAttendanceRecord(record));
+
+            await activityLogsService.log({
+                organizationId: record.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: record.userId,
+                title: "Registro de asistencia actualizado",
+                category: LogCategory.attendance,
+            });
         } catch (error) {
             console.error("[AttendanceRecords][PUT /:id]", error);
             resp.status(500).json({
@@ -178,8 +195,21 @@ const AttendanceRecordsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
+            const record = await attendanceRecordsService.findById(req.params.id as string);
+            if (!record) {
+                return resp.status(404).json({ error: "Registro de asistencia no encontrado" });
+            }
+
             await attendanceRecordsService.remove(req.params.id as string);
             resp.status(204).send();
+
+            await activityLogsService.log({
+                organizationId: record.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: record.userId,
+                title: "Registro de asistencia eliminado",
+                category: LogCategory.attendance,
+            });
         } catch (error) {
             console.error("[AttendanceRecords][DELETE /:id]", error);
             resp.status(500).json({ error: "Error al eliminar el registro de asistencia" });

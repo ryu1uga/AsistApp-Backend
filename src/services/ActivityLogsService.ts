@@ -19,6 +19,18 @@ class ActivityLogsService {
         return prisma.activityLog.create({ data });
     }
 
+    /**
+     * Registra una actividad sin propagar errores: si el registro falla,
+     * se deja constancia en consola pero no se interrumpe el flujo del
+     * endpoint que lo invocó.
+     */
+    log(data: CreateActivityLogDto) {
+        return this.create(data).catch((error) => {
+            console.error("[ActivityLog]", error);
+            return null;
+        });
+    }
+
     update(id: string, data: UpdateActivityLogDto) {
         return prisma.activityLog.update({ where: { id }, data });
     }

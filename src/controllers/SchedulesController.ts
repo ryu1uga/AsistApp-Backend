@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
-import { schedulesService, usersService } from "../services";
+import { activityLogsService, schedulesService, usersService } from "../services";
 import { CreateScheduleDto, UpdateScheduleDto } from "../dtos";
 import { formatTime } from "../utils/formatters";
 import emailService from "../services/EmailService";
+import { LogCategory } from "../generated/prisma/enums";
 
 const serializeSchedule = (schedule: any) => ({
     ...schedule,
@@ -126,6 +127,14 @@ const SchedulesController = () => {
 
             const schedule = await schedulesService.create(data);
             resp.status(201).json(serializeSchedule(schedule));
+
+            await activityLogsService.log({
+                organizationId: schedule.organizationId,
+                performedById: currentUser.id,
+                affectedUserId: schedule.userId,
+                title: "Horario creado",
+                category: LogCategory.schedule,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el horario" });
         }
@@ -183,6 +192,14 @@ const SchedulesController = () => {
             const schedule = await schedulesService.update(scheduleId, data);
             resp.json(serializeSchedule(schedule));
 
+            await activityLogsService.log({
+                organizationId: schedule.organizationId,
+                performedById: currentUser.id,
+                affectedUserId: schedule.userId,
+                title: "Horario actualizado",
+                category: LogCategory.schedule,
+            });
+
             if (sendStatusEmail) {
                 const trainee = await usersService.findById(existingSchedule.userId);
                 if (trainee) {
@@ -217,8 +234,21 @@ const SchedulesController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
+            const schedule = await schedulesService.findById(req.params.id as string);
+            if (!schedule) {
+                return resp.status(404).json({ error: "Horario no encontrado" });
+            }
+
             await schedulesService.remove(req.params.id as string);
             resp.status(204).send();
+
+            await activityLogsService.log({
+                organizationId: schedule.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: schedule.userId,
+                title: "Horario eliminado",
+                category: LogCategory.schedule,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el horario" });
         }

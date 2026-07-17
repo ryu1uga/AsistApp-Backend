@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
-import { scheduleChangeRequestsService, scheduleDaysService, usersService } from "../services";
+import { activityLogsService, scheduleChangeRequestsService, scheduleDaysService, usersService } from "../services";
 import { CreateScheduleChangeRequestDto, UpdateScheduleChangeRequestDto } from "../dtos";
 import { formatTime } from "../utils/formatters";
 import emailService from "../services/EmailService";
+import { LogCategory } from "../generated/prisma/enums";
 
 const serializeScheduleChangeRequest = (req: any) => ({
     ...req,
@@ -128,6 +129,18 @@ const ScheduleChangeRequestsController = () => {
 
             const request = await scheduleChangeRequestsService.create(data);
             resp.status(201).json(serializeScheduleChangeRequest(request));
+
+            const scheduleDay = await scheduleDaysService.findById(request.scheduleDayId);
+            const organizationId = (scheduleDay as any)?.schedule?.organizationId;
+            if (organizationId) {
+                await activityLogsService.log({
+                    organizationId,
+                    performedById: currentUser.id,
+                    affectedUserId: request.userId,
+                    title: "Solicitud de cambio de horario creada",
+                    category: LogCategory.schedule,
+                });
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la solicitud de cambio de horario" });
         }
@@ -179,6 +192,18 @@ const ScheduleChangeRequestsController = () => {
             const request = await scheduleChangeRequestsService.update(requestId, data);
             resp.json(serializeScheduleChangeRequest(request));
 
+            const scheduleDay = await scheduleDaysService.findById(request.scheduleDayId);
+            const organizationId = (scheduleDay as any)?.schedule?.organizationId;
+            if (organizationId) {
+                await activityLogsService.log({
+                    organizationId,
+                    performedById: currentUser.id,
+                    affectedUserId: request.userId,
+                    title: "Solicitud de cambio de horario actualizada",
+                    category: LogCategory.schedule,
+                });
+            }
+
             if (sendStatusEmail) {
                 const trainee = await usersService.findById(existing.userId);
                 if (trainee) {
@@ -213,8 +238,25 @@ const ScheduleChangeRequestsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
+            const request = await scheduleChangeRequestsService.findById(req.params.id as string);
+            if (!request) {
+                return resp.status(404).json({ error: "Solicitud de cambio de horario no encontrada" });
+            }
+
             await scheduleChangeRequestsService.remove(req.params.id as string);
             resp.status(204).send();
+
+            const scheduleDay = await scheduleDaysService.findById(request.scheduleDayId);
+            const organizationId = (scheduleDay as any)?.schedule?.organizationId;
+            if (organizationId) {
+                await activityLogsService.log({
+                    organizationId,
+                    performedById: req.user!.id,
+                    affectedUserId: request.userId,
+                    title: "Solicitud de cambio de horario eliminada",
+                    category: LogCategory.schedule,
+                });
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar la solicitud de cambio de horario" });
         }

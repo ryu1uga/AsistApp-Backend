@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
-import { organizationsService, usersService } from "../services";
+import { activityLogsService, organizationsService, usersService } from "../services";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "../dtos";
 import { authenticate } from "../middlewares/authenticate";
 import { ValidationError, ForbiddenError, NotFoundError } from "../utils/validation";
+import { LogCategory } from "../generated/prisma/enums";
 
 const OrganizationsController = () => {
     const router = express.Router();
@@ -120,6 +121,14 @@ const OrganizationsController = () => {
             const organization = await organizationsService.create(data);
             await usersService.update(currentUser.id, { organizationId: organization.id });
             resp.status(201).json(organization);
+
+            await activityLogsService.log({
+                organizationId: organization.id,
+                performedById: currentUser.id,
+                affectedUserId: currentUser.id,
+                title: "Organización creada",
+                category: LogCategory.members,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la organización" });
         }
@@ -163,6 +172,14 @@ const OrganizationsController = () => {
 
             const organization = await organizationsService.update(req.params.id as string, data, currentUser);
             resp.json(organization);
+
+            await activityLogsService.log({
+                organizationId: organization.id,
+                performedById: currentUser.id,
+                affectedUserId: currentUser.id,
+                title: "Organización actualizada",
+                category: LogCategory.members,
+            });
         } catch (error: any) {
             if (error instanceof ValidationError) {
                 return resp.status(400).json({ error: error.message });
@@ -215,8 +232,21 @@ const OrganizationsController = () => {
                 return resp.status(403).json({ error: "No tienes permiso para eliminar esta organización" });
             }
 
+            const organization = await organizationsService.findById(req.params.id as string);
+            if (!organization) {
+                return resp.status(404).json({ error: "Organización no encontrada" });
+            }
+
             await organizationsService.remove(req.params.id as string);
             resp.status(204).send();
+
+            await activityLogsService.log({
+                organizationId: organization.id,
+                performedById: currentUser.id,
+                affectedUserId: currentUser.id,
+                title: "Organización eliminada",
+                category: LogCategory.members,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar la organización" });
         }

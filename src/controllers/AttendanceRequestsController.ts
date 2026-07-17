@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
-import { attendanceRequestsService, usersService } from "../services";
+import { activityLogsService, attendanceRequestsService, usersService } from "../services";
 import { CreateAttendanceRequestDto, UpdateAttendanceRequestDto } from "../dtos";
 import { formatDate } from "../utils/formatters";
+import { LogCategory } from "../generated/prisma/enums";
 
 const serializeAttendanceRequest = (req: any) => ({
     ...req,
@@ -107,6 +108,14 @@ const AttendanceRequestsController = () => {
             const data: CreateAttendanceRequestDto = req.body;
             const request = await attendanceRequestsService.create(data);
             resp.status(201).json(serializeAttendanceRequest(request));
+
+            await activityLogsService.log({
+                organizationId: data.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: data.userId,
+                title: "Solicitud de asistencia creada",
+                category: LogCategory.attendance,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al crear la solicitud de asistencia" });
         }
@@ -144,6 +153,14 @@ const AttendanceRequestsController = () => {
             const data: UpdateAttendanceRequestDto = req.body;
             const request = await attendanceRequestsService.update(req.params.id as string, data);
             resp.json(serializeAttendanceRequest(request));
+
+            await activityLogsService.log({
+                organizationId: request.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: request.userId,
+                title: "Solicitud de asistencia actualizada",
+                category: LogCategory.attendance,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar la solicitud de asistencia" });
         }
@@ -168,8 +185,21 @@ const AttendanceRequestsController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
+            const request = await attendanceRequestsService.findById(req.params.id as string);
+            if (!request) {
+                return resp.status(404).json({ error: "Solicitud de asistencia no encontrada" });
+            }
+
             await attendanceRequestsService.remove(req.params.id as string);
             resp.status(204).send();
+
+            await activityLogsService.log({
+                organizationId: request.organizationId,
+                performedById: req.user!.id,
+                affectedUserId: request.userId,
+                title: "Solicitud de asistencia eliminada",
+                category: LogCategory.attendance,
+            });
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar la solicitud de asistencia" });
         }

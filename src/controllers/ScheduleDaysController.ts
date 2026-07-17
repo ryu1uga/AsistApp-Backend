@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
-import { scheduleDaysService } from "../services";
+import { activityLogsService, scheduleDaysService, schedulesService } from "../services";
 import { CreateScheduleDayDto, UpdateScheduleDayDto } from "../dtos";
 import { formatTime } from "../utils/formatters";
+import { LogCategory } from "../generated/prisma/enums";
 
 const serializeScheduleDay = (day: any) => ({
     ...day,
@@ -131,6 +132,17 @@ const ScheduleDaysController = () => {
             const data: CreateScheduleDayDto = req.body;
             const scheduleDay = await scheduleDaysService.create(data);
             resp.status(201).json(serializeScheduleDay(scheduleDay));
+
+            const schedule = await schedulesService.findById(data.scheduleId);
+            if (schedule) {
+                await activityLogsService.log({
+                    organizationId: schedule.organizationId,
+                    performedById: req.user!.id,
+                    affectedUserId: schedule.userId,
+                    title: "Día de horario creado",
+                    category: LogCategory.schedule,
+                });
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al crear el día de horario" });
         }
@@ -166,8 +178,20 @@ const ScheduleDaysController = () => {
     router.put("/:id", async (req: Request, resp: Response) => {
         try {
             const data: UpdateScheduleDayDto = req.body;
+            const existing = await scheduleDaysService.findById(req.params.id as string);
             const scheduleDay = await scheduleDaysService.update(req.params.id as string, data);
             resp.json(serializeScheduleDay(scheduleDay));
+
+            const schedule = (existing as any)?.schedule;
+            if (schedule) {
+                await activityLogsService.log({
+                    organizationId: schedule.organizationId,
+                    performedById: req.user!.id,
+                    affectedUserId: schedule.userId,
+                    title: "Día de horario actualizado",
+                    category: LogCategory.schedule,
+                });
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al actualizar el día de horario" });
         }
@@ -192,8 +216,24 @@ const ScheduleDaysController = () => {
      */
     router.delete("/:id", async (req: Request, resp: Response) => {
         try {
+            const existing = await scheduleDaysService.findById(req.params.id as string);
+            if (!existing) {
+                return resp.status(404).json({ error: "Día de horario no encontrado" });
+            }
+
             await scheduleDaysService.remove(req.params.id as string);
             resp.status(204).send();
+
+            const schedule = (existing as any).schedule;
+            if (schedule) {
+                await activityLogsService.log({
+                    organizationId: schedule.organizationId,
+                    performedById: req.user!.id,
+                    affectedUserId: schedule.userId,
+                    title: "Día de horario eliminado",
+                    category: LogCategory.schedule,
+                });
+            }
         } catch (error) {
             resp.status(500).json({ error: "Error al eliminar el día de horario" });
         }
